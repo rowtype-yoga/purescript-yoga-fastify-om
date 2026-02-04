@@ -1,0 +1,34 @@
+workspace:
+  package_set:
+    registry: 51.1.0
+
+package:
+  name: yoga-fastify-om
+  publish:
+    version: 0.1.0
+    license: MIT
+    location:
+      githubOwner: rowtype-yoga
+      githubRepo: purescript-yoga-fastify-om
+  dependencies:
+    - forgetmenot
+    - undefined-is-not-a-problem
+    - aff: ">=7.0.0 <8.0.0"
+    - effect: ">=4.0.0 <5.0.0"
+    - prelude: ">=6.0.0 <7.0.0"
+    - routing-duplex: ">=0.7.0 <0.8.0"
+    - yoga-fastify: "*"
+    - yoga-json: ">=5.0.0 <6.0.0"
+    - yoga-om-core: ">=1.0.0 <2.0.0"
+    - yoga-om-layer: ">=1.0.0 <2.0.0"
+  test:
+    main: Test.Main
+    dependencies:
+      - spec: ">=7.0.0 <8.0.0"
+      - console: ">=6.0.0 <7.0.0"
+      - exceptions: ">=6.0.0 <7.0.0"
+      - foreign: ">=7.0.0 <8.0.0"
+      - maybe: ">=6.0.0 <7.0.0"
+      - either: ">=6.0.0 <7.0.0"
+      - foreign-object: ">=4.0.0 <5.0.0"
+      - routing-duplex: ">=0.7.0 <0.8.0"
