@@ -1,5 +1,5 @@
 module Yoga.Fastify.Om.Route.Handler
-  ( Handler
+  ( HandlerFn
   , Request
   , class DefaultRequestFields
   , class DefaultRequestFieldsRL
@@ -49,7 +49,7 @@ type Request r = Record r
 -- |     -- headers :: { authorization :: BearerToken }
 -- |     -- body :: User
 -- |     pure $ respondNoHeaders (Proxy :: _ "ok") []
-type Handler pathParams queryParams reqHeaders body respVariant =
+type HandlerFn pathParams queryParams reqHeaders body respVariant =
   { path :: Record pathParams
   , query :: Record queryParams
   , headers :: Record reqHeaders

@@ -19,7 +19,8 @@ import Yoga.Fastify.Fastify as F
 import Yoga.Fastify.Om.Path (class PathPattern, pathPattern)
 import Yoga.Fastify.Om.Route.Route (Route)
 import Yoga.Fastify.Om.Route.HandleResponse (class HandleResponse, handleResponse)
-import Yoga.Fastify.Om.Route.Handler (Handler, class DefaultRequestFields, class SegmentPathParams, class SegmentQueryParams, class EncodingBody)
+import Yoga.Fastify.Om.Route.Handler (class DefaultRequestFields, class SegmentPathParams, class SegmentQueryParams, class EncodingBody)
+import Yoga.Fastify.Om.Route.RouteHandler (Handler, class RouteHandler, runHandler)
 import Yoga.Fastify.Om.Route.ParseBody (class ParseBody, parseBody)
 import Yoga.Fastify.Om.Route.ParseHeaders (class ParseHeaders, parseHeaders)
 import Yoga.Fastify.Om.Route.ParsePathParams (class ParsePathParams, parsePathParams)
@@ -42,11 +43,11 @@ handleRoute
   => ParseHeaders fullHeaders
   => ParseBody fullEncoding body
   => HandleResponse respVariant
-  => Proxy (Route method segments (Record partialRequest) respVariant)
-  -> Handler pathParams queryParams fullHeaders body respVariant
+  => RouteHandler (Route method segments (Record partialRequest) respVariant) pathParams queryParams fullHeaders body respVariant
+  => Handler (Route method segments (Record partialRequest) respVariant)
   -> Fastify
   -> Effect Unit
-handleRoute _ handler fastify =
+handleRoute handler fastify =
   F.route
     { method: HTTPMethod (String.toUpper (renderMethod (Proxy :: Proxy method)))
     , url: RouteURL (pathPattern (Proxy :: Proxy segments))
@@ -80,7 +81,7 @@ handleRoute _ handler fastify =
       Nothing ->
         case pathResult, queryResult, headersResult, bodyResult of
           Right path, Right query, Right headers, Right body -> do
-            result <- handler { path, query, headers, body }
+            result <- (runHandler handler) { path, query, headers, body }
             handleResponse (Proxy :: Proxy respVariant) result reply
           _, _, _, _ -> pure unit -- impossible
       Just errors ->

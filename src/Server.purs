@@ -7,11 +7,12 @@ import Effect (Effect)
 import Effect.Aff as Aff
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Type.Proxy (Proxy(..))
+
 import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.Fastify.Om.Path (type (/), type (:?), Capture, Path)
-import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, ResponseData, handleRoute, respondNoHeaders)
+import Control.Monad.Reader.Trans (ask)
+import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, mkHandler, JSON, ResponseData, handleRoute, respondNoHeaders, handle, respond, reject)
 
 --------------------------------------------------------------------------------
 -- Example Types
@@ -32,8 +33,8 @@ type HealthRoute = Route GET
   ( ok :: ResponseData () { status :: String }
   )
 
-healthHandler :: Handler () () () Unit (ok :: ResponseData () { status :: String })
-healthHandler _ = pure $ respondNoHeaders @"ok" { status: "healthy" }
+healthHandler :: Handler HealthRoute
+healthHandler = mkHandler \_ -> pure $ respondNoHeaders @"ok" { status: "healthy" }
 
 -- GET /users/:id
 type UserRoute = Route GET
@@ -43,18 +44,22 @@ type UserRoute = Route GET
   , notFound :: ResponseData () ErrorResponse
   )
 
-userHandler
-  :: Handler (id :: Int) () () Unit
-       ( ok :: ResponseData () User
-       , notFound :: ResponseData () ErrorResponse
-       )
-userHandler { path } =
+userHandler :: Handler UserRoute
+userHandler = mkHandler \{ path } ->
   if path.id == 1 then
     pure $ respondNoHeaders @"ok"
       { id: 1, name: "Alice", email: "alice@example.com" }
   else
     pure $ respondNoHeaders @"notFound"
       { error: "User not found" }
+
+-- GET /users/:id (Om version — short-circuiting style)
+userHandlerOm :: Handler UserRoute
+userHandlerOm = handle do
+  { path } <- ask
+  when (path.id /= 1) $
+    reject { notFound: { error: "User not found" } }
+  respond { ok: { id: 1, name: "Alice", email: "alice@example.com" } }
 
 -- GET /users?limit=10
 type UsersWithLimitRoute = Route GET
@@ -63,11 +68,8 @@ type UsersWithLimitRoute = Route GET
   ( ok :: ResponseData () { users :: Array User, limit :: Maybe Int }
   )
 
-usersWithLimitHandler
-  :: Handler () (limit :: Maybe Int) () Unit
-       ( ok :: ResponseData () { users :: Array User, limit :: Maybe Int }
-       )
-usersWithLimitHandler { query } = pure $ respondNoHeaders @"ok"
+usersWithLimitHandler :: Handler UsersWithLimitRoute
+usersWithLimitHandler = mkHandler \{ query } -> pure $ respondNoHeaders @"ok"
   { users:
       [ { id: 1, name: "Alice", email: "alice@example.com" }
       , { id: 2, name: "Bob", email: "bob@example.com" }
@@ -83,12 +85,8 @@ type CreateUserRoute = Route POST
   , badRequest :: ResponseData () ErrorResponse
   )
 
-createUserHandler
-  :: Handler () () () CreateUserRequest
-       ( created :: ResponseData () User
-       , badRequest :: ResponseData () ErrorResponse
-       )
-createUserHandler { body } =
+createUserHandler :: Handler CreateUserRoute
+createUserHandler = mkHandler \{ body } ->
   if body.name == "" then
     pure $ respondNoHeaders @"badRequest"
       { error: "Name cannot be empty" }
@@ -105,10 +103,10 @@ createServer = do
   fastify <- F.fastify {}
 
   -- Register routes
-  handleRoute (Proxy :: _ HealthRoute) healthHandler fastify
-  handleRoute (Proxy :: _ UserRoute) userHandler fastify
-  handleRoute (Proxy :: _ UsersWithLimitRoute) usersWithLimitHandler fastify
-  handleRoute (Proxy :: _ CreateUserRoute) createUserHandler fastify
+  handleRoute healthHandler fastify
+  handleRoute userHandler fastify
+  handleRoute usersWithLimitHandler fastify
+  handleRoute createUserHandler fastify
 
   pure fastify
 
