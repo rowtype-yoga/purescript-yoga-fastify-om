@@ -2,30 +2,23 @@ module Test.ParserTest where
 
 import Prelude
 
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Either (Either(..))
 import Data.String (Pattern(..))
 import Data.String as String
 import Data.Int as Int
 import Data.Array as Array
-import Data.Maybe (fromMaybe)
 import Type.Proxy (Proxy(..))
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Prim.Row as Row
-import Prim.RowList as RL
 import Type.RowList (class RowToList, RowList, Cons, Nil)
 import Record as Record
 import Record.Builder as Builder
 import Effect (Effect)
 import Effect.Console (log, logShow)
 
--- Import our path types from OperatorTest
-import Test.OperatorTest (Path, PathCons, Param, QueryParams)
-
--- Redefine the operators locally for convenience
-infixr 8 type Param as :>
-infixr 6 type PathCons as /
-infixl 1 type QueryParams as :?
+-- Import path types from production module
+import Yoga.Fastify.Om.Path (Path, PathCons, Param, QueryParams, Required, type (:>), type (/), type (:?))
 
 -- Let's start with a simple example
 -- Given: Path ("users" / "id" :> Int / "posts")
@@ -187,10 +180,7 @@ test6 = parsePathSegments (Proxy :: Proxy TestPath) "/users/hello/posts"
 
 -- Now let's add query parameter parsing
 -- Query params can be optional (Maybe values) or required (Required wrapper)
-
--- Type-level marker for required query params
-data Required :: Type -> Type
-data Required a
+-- Required is imported from Yoga.Fastify.Om.Path
 
 -- Helper to parse query string into key-value pairs
 parseQueryString :: String -> Array { key :: String, value :: String }

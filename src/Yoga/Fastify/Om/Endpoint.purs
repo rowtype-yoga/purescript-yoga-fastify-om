@@ -9,8 +9,7 @@ module Yoga.Fastify.Om.Endpoint
   -- * Response Types
   , Response
   , SimpleResponse
-  , class SetHeaders
-  , setHeaders
+  , module Yoga.Fastify.Om.Route.SetHeaders
   -- * Request Types
   , OptsR
   , OptsOpt
@@ -51,6 +50,7 @@ import Yoga.Fastify.Fastify (FastifyReply, RouteURL(..), StatusCode(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.Fastify.Om as FO
 import Yoga.Fastify.Om.RequestBody (RequestBody(..))
+import Yoga.Fastify.Om.Route.SetHeaders (class SetHeaders, setHeaders)
 import Yoga.JSON (class ReadForeign, class WriteForeign, read, writeImpl)
 import Yoga.Om as Om
 import Uncurried.RWSET (withRWSET)
@@ -67,7 +67,7 @@ data Endpoint path request response = Endpoint
   }
 
 -- | Request record parameterized by wrapper type
--- | 
+-- |
 -- | Use with Opt for optional fields, Identity for actual values
 type OptsR :: (Type -> Type) -> Type -> Type -> Type -> Type
 type OptsR f q h b =
@@ -334,42 +334,6 @@ coerceHandler
    . EndpointHandler ctx err path (Record full) response
   -> EndpointHandler ctx err path (Record partial) response
 coerceHandler = unsafeCoerce
-
---------------------------------------------------------------------------------
--- Response Header Setting
---------------------------------------------------------------------------------
-
--- | Set response headers from a record using RowList
--- | Field names should be actual HTTP header names (use quotes for special chars)
--- | Example: { "Content-Type": "application/json", "X-Request-Id": "123" }
-class SetHeaders (headers :: Row Type) where
-  setHeaders :: Record headers -> FastifyReply -> Effect FastifyReply
-
-instance (RowToList headers rl, SetHeadersRL rl headers) => SetHeaders headers where
-  setHeaders = setHeadersRL (Proxy :: Proxy rl)
-
--- | Helper class that works with RowList
-class SetHeadersRL (rl :: RowList Type) (headers :: Row Type) | rl -> headers where
-  setHeadersRL :: Proxy rl -> Record headers -> FastifyReply -> Effect FastifyReply
-
-instance SetHeadersRL RL.Nil () where
-  setHeadersRL _ _ reply = pure reply
-
-instance
-  ( IsSymbol name
-  , SetHeadersRL tail tailRow
-  , Cons name String tailRow headers
-  , Lacks name tailRow
-  ) =>
-  SetHeadersRL (RL.Cons name String tail) headers where
-  setHeadersRL _ headers reply = do
-    let
-      headerName = reflectSymbol (Proxy :: Proxy name)
-      value = Record.get (Proxy :: Proxy name) headers
-      tailHeaders = Record.delete (Proxy :: Proxy name) headers :: Record tailRow
-
-    reply' <- F.header headerName value reply
-    setHeadersRL (Proxy :: Proxy tail) tailHeaders reply'
 
 -- | Execute an endpoint handler with automatic parsing and response sending
 handleEndpoint

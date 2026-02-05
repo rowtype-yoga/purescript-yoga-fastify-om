@@ -19,6 +19,9 @@
               "routing-duplex": ">=0.7.0 <0.8.0"
             },
             "undefined-is-not-a-problem",
+            {
+              "variant": ">=8.0.0 <9.0.0"
+            },
             "yoga-fastify",
             {
               "yoga-json": ">=5.0.0 <6.0.0"
@@ -568,15 +571,7 @@
     },
     "extra_packages": {
       "vitest": {
-        "git": "https://github.com/rowtype-yoga/purescript-vitest.git",
-        "ref": "v1.0.0",
-        "dependencies": [
-          "effect",
-          "foldable-traversable",
-          "maybe",
-          "prelude",
-          "web-html"
-        ]
+        "path": "../purescript-vitest"
       },
       "yoga-fastify": {
         "path": "../purescript-yoga-fastify"
@@ -1532,14 +1527,21 @@
       ]
     },
     "vitest": {
-      "type": "git",
-      "url": "https://github.com/rowtype-yoga/purescript-vitest.git",
-      "rev": "e7f2614c55d34905464971921c3fa4ab25a4ae3d",
+      "type": "local",
+      "path": "../purescript-vitest",
       "dependencies": [
+        "aff",
         "effect",
-        "foldable-traversable",
+        "either",
+        "exceptions",
+        "js-promise",
+        "js-promise-aff",
         "maybe",
+        "nullable",
         "prelude",
+        "transformers",
+        "unsafe-coerce",
+        "web-dom",
         "web-html"
       ]
     },

@@ -2,29 +2,24 @@ module ParserTest.Spec where
 
 import Prelude
 
-import Data.Maybe (Maybe(..))
 import Data.Either (Either(..))
+import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Aff (Aff)
-import Type.Proxy (Proxy(..))
-import ViTest (ViTest, describe, test, viTest)
-import ViTest.Expect (expectToBe)
 import Test.ParserTest as Parser
-import Test.OperatorTest (Path, PathCons, Param, QueryParams)
+import Type.Proxy (Proxy(..))
+import Yoga.Fastify.Om.Path (Path, Required, type (:>), type (/), type (:?))
+import ViTest (ViTest, describe, test)
+import ViTest.Expect (expectToBe)
 
 -- Custom equality assertion that compares in PureScript then asserts true
 expectToEqual :: forall a. Eq a => a -> a -> Aff Unit
 expectToEqual expected actual = expectToBe true (expected == actual)
 
--- Helper operators for tests
-infixr 8 type Param as :>
-infixr 6 type PathCons as /
-infixl 1 type QueryParams as :?
-
 -- Type aliases for tests
 type TestPathSimple = "users" / "id" :> Int / "posts"
 type TestPathWithQuery = Path ("users" / "id" :> Int / "posts") :? (limit :: Int, offset :: Int)
-type TestPathWithRequired = Path ("users" / "id" :> Int / "posts") :? (limit :: Parser.Required Int, offset :: Int)
+type TestPathWithRequired = Path ("users" / "id" :> Int / "posts") :? (limit :: Required Int, offset :: Int)
 type TestPathError = Path ("users" / "id" :> Int / "posts") :? (limit :: Int)
 
 -- Test segment parsing
@@ -87,19 +82,19 @@ testOptionalQueryParams = describe "Optional Query Parameters" do
 testRequiredQueryParams :: Effect ViTest
 testRequiredQueryParams = describe "Required Query Parameters" $ do
   _ <- test "parses required param as plain type" do
-    let result = Parser.parseFullPath (Proxy :: Proxy TestPathWithRequired) (Proxy :: Proxy (limit :: Parser.Required Int, offset :: Int)) "/users/124/posts?limit=10&offset=20"
+    let result = Parser.parseFullPath (Proxy :: Proxy TestPathWithRequired) (Proxy :: Proxy (limit :: Required Int, offset :: Int)) "/users/124/posts?limit=10&offset=20"
     expectToEqual (Right { path: { id: 124 }, query: { limit: 10, offset: Just 20 } }) result
 
   _ <- test "succeeds when required param present, optional missing" do
-    let result = Parser.parseFullPath (Proxy :: Proxy TestPathWithRequired) (Proxy :: Proxy (limit :: Parser.Required Int, offset :: Int)) "/users/124/posts?limit=10"
+    let result = Parser.parseFullPath (Proxy :: Proxy TestPathWithRequired) (Proxy :: Proxy (limit :: Required Int, offset :: Int)) "/users/124/posts?limit=10"
     expectToEqual (Right { path: { id: 124 }, query: { limit: 10, offset: Nothing } }) result
 
   _ <- test "fails when required param missing" do
-    let result = Parser.parseFullPath (Proxy :: Proxy TestPathWithRequired) (Proxy :: Proxy (limit :: Parser.Required Int, offset :: Int)) "/users/124/posts"
+    let result = Parser.parseFullPath (Proxy :: Proxy TestPathWithRequired) (Proxy :: Proxy (limit :: Required Int, offset :: Int)) "/users/124/posts"
     expectToEqual (Left [ "Missing required query parameter: limit" ]) result
 
   test "fails with descriptive error for missing required param" do
-    let result = Parser.parseFullPath (Proxy :: Proxy TestPathWithRequired) (Proxy :: Proxy (limit :: Parser.Required Int, offset :: Int)) "/users/124/posts?offset=5"
+    let result = Parser.parseFullPath (Proxy :: Proxy TestPathWithRequired) (Proxy :: Proxy (limit :: Required Int, offset :: Int)) "/users/124/posts?offset=5"
     expectToEqual (Left [ "Missing required query parameter: limit" ]) result
 
 -- Test error cases

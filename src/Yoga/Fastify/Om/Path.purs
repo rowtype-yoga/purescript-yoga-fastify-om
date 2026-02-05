@@ -1,12 +1,22 @@
 module Yoga.Fastify.Om.Path
   ( Path
+  , Root
   , Lit
   , Capture
   , PathCons
   , type (/)
+  , Param
+  , type (:>)
+  , QueryParams
+  , type (:?)
+  , Required
   , class PathPattern
   , pathPattern
+  , class PathPatternSegs
+  , pathPatternSegs
   -- , class PathParams  -- TODO: Export when instances are implemented
+  , class ParseParam
+  , parseParam
   , class ParsePath
   , parsePath
   ) where
@@ -17,7 +27,6 @@ import Data.Array (intercalate, uncons)
 import Data.Array as Array
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
-import Data.Number as Number
 import Data.String (Pattern(..), split)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Prim.Row as Row
@@ -32,10 +41,18 @@ import Unsafe.Coerce (unsafeCoerce)
 -- | Type-level path representation
 -- |
 -- | Examples:
--- |   Path @"users"                           -- /users
--- |   Path (@"users" / Capture "id" Int)     -- /users/:id
--- |   Path (@"users" / Capture "id" Int / @"posts")  -- /users/:id/posts
-data Path (segments :: Type)
+-- |   Path Root                               -- /
+-- |   Path (Lit "users")                      -- /users
+-- |   Path (Lit "users" / Capture "id" Int)  -- /users/:id
+-- |   Path (Lit "users" / Capture "id" Int / Lit "posts")  -- /users/:id/posts
+data Path :: forall k. k -> Type
+data Path segments
+
+-- | Root path representing "/"
+-- |
+-- | Example:
+-- |   Path Root  -- /
+data Root
 
 -- | Literal path segment (wrapper for Symbol to work around PureScript 0.15 limitations)
 -- |
@@ -59,7 +76,35 @@ data Capture (name :: Symbol) (ty :: Type)
 -- | Example:
 -- |   Lit "users" / Capture "id" Int / Lit "posts"
 infixr 6 type PathCons as /
+
+data PathCons :: forall k1 k2. k1 -> k2 -> Type
 data PathCons left right
+
+-- | Sugar for Capture — use with bare Symbols in the path DSL
+-- |
+-- | Example:
+-- |   Path ("users" / "id" :> Int / "posts")
+-- |   -- equivalent to: Path (Lit "users" / Capture "id" Int / Lit "posts")
+data Param (name :: Symbol) (ty :: Type)
+
+infixr 8 type Param as :>
+
+-- | Attach query parameters to a path
+-- |
+-- | Example:
+-- |   Path ("users" / "id" :> Int) :? (limit :: Int, offset :: Required Int)
+data QueryParams :: forall k. k -> Row Type -> Type
+data QueryParams path params
+
+infixl 1 type QueryParams as :?
+
+-- | Marker for required query parameters (default is optional → Maybe)
+-- |
+-- | Example:
+-- |   Path ("users") :? (limit :: Int, offset :: Required Int)
+-- |   -- limit parses as Maybe Int, offset parses as Int (fails if missing)
+data Required :: Type -> Type
+data Required a
 
 --------------------------------------------------------------------------------
 -- PathPattern: Generate URL patterns for Fastify
@@ -68,34 +113,81 @@ data PathCons left right
 -- | Generate a Fastify-compatible URL pattern from a path type
 -- |
 -- | Examples:
--- |   pathPattern (Proxy :: _ (Path "users")) = "/users"
--- |   pathPattern (Proxy :: _ (Path ("users" / Capture "id" Int))) = "/users/:id"
+-- |   pathPattern (Proxy :: _ (Path Root)) = "/"
+-- |   pathPattern (Proxy :: _ (Path (Lit "users"))) = "/users"
+-- |   pathPattern (Proxy :: _ (Path (Lit "users" / Capture "id" Int))) = "/users/:id"
 class PathPattern (path :: Type) where
   pathPattern :: Proxy path -> String
 
--- Base case: single literal segment using Lit wrapper
-instance pathPatternLit :: IsSymbol s => PathPattern (Path (Lit s)) where
-  pathPattern _ = "/" <> reflectSymbol (Proxy :: Proxy s)
+-- Path delegates to PathPatternSegs for the inner segments
+instance pathPatternPath ::
+  PathPatternSegs segs =>
+  PathPattern (Path segs) where
+  pathPattern _ = pathPatternSegs (Proxy :: Proxy segs)
 
--- Base case: single capture
-instance pathPatternCapture :: (IsSymbol name) => PathPattern (Path (Capture name ty)) where
-  pathPattern _ = "/:" <> reflectSymbol (Proxy :: Proxy name)
+-- QueryParams wrapper delegates to inner path
+instance pathPatternQueryParams ::
+  ( PathPattern path
+  ) =>
+  PathPattern (QueryParams path params) where
+  pathPattern _ = pathPattern (Proxy :: Proxy path)
 
--- Recursive case: Lit followed by more
-instance pathPatternLitCons ::
+-- | Internal poly-kinded class for generating URL patterns from path segments.
+class PathPatternSegs :: forall k. k -> Constraint
+class PathPatternSegs segs where
+  pathPatternSegs :: Proxy segs -> String
+
+-- Root
+instance pathPatternSegsRoot :: PathPatternSegs Root where
+  pathPatternSegs _ = "/"
+
+-- Lit wrapper
+else instance pathPatternSegsLit :: IsSymbol s => PathPatternSegs (Lit s) where
+  pathPatternSegs _ = "/" <> reflectSymbol (Proxy :: Proxy s)
+
+-- Capture
+else instance pathPatternSegsCapture :: IsSymbol name => PathPatternSegs (Capture name ty) where
+  pathPatternSegs _ = "/:" <> reflectSymbol (Proxy :: Proxy name)
+
+-- Param sugar
+else instance pathPatternSegsParam :: IsSymbol name => PathPatternSegs (Param name ty) where
+  pathPatternSegs _ = "/:" <> reflectSymbol (Proxy :: Proxy name)
+
+-- PathCons with Lit on left
+else instance pathPatternSegsLitCons ::
   ( IsSymbol s
-  , PathPattern (Path rest)
+  , PathPatternSegs rest
   ) =>
-  PathPattern (Path (Lit s / rest)) where
-  pathPattern _ = "/" <> reflectSymbol (Proxy :: Proxy s) <> pathPattern (Proxy :: _ (Path rest))
+  PathPatternSegs (PathCons (Lit s) rest) where
+  pathPatternSegs _ = "/" <> reflectSymbol (Proxy :: Proxy s) <> pathPatternSegs (Proxy :: Proxy rest)
 
--- Recursive case: capture followed by more
-instance pathPatternCaptureCons ::
+-- PathCons with Capture on left
+else instance pathPatternSegsCaptureCons ::
   ( IsSymbol name
-  , PathPattern (Path rest)
+  , PathPatternSegs rest
   ) =>
-  PathPattern (Path (Capture name ty / rest)) where
-  pathPattern _ = "/:" <> reflectSymbol (Proxy :: Proxy name) <> pathPattern (Proxy :: _ (Path rest))
+  PathPatternSegs (PathCons (Capture name ty) rest) where
+  pathPatternSegs _ = "/:" <> reflectSymbol (Proxy :: Proxy name) <> pathPatternSegs (Proxy :: Proxy rest)
+
+-- PathCons with Param on left
+else instance pathPatternSegsParamCons ::
+  ( IsSymbol name
+  , PathPatternSegs rest
+  ) =>
+  PathPatternSegs (PathCons (Param name ty) rest) where
+  pathPatternSegs _ = "/:" <> reflectSymbol (Proxy :: Proxy name) <> pathPatternSegs (Proxy :: Proxy rest)
+
+-- PathCons with bare Symbol on left (from :> sugar)
+else instance pathPatternSegsSymbolCons ::
+  ( IsSymbol s
+  , PathPatternSegs rest
+  ) =>
+  PathPatternSegs (PathCons s rest) where
+  pathPatternSegs _ = "/" <> reflectSymbol (Proxy :: Proxy s) <> pathPatternSegs (Proxy :: Proxy rest)
+
+-- Bare Symbol (single segment, from :> sugar)
+else instance pathPatternSegsSymbol :: IsSymbol s => PathPatternSegs s where
+  pathPatternSegs _ = "/" <> reflectSymbol (Proxy :: Proxy s)
 
 --------------------------------------------------------------------------------
 -- PathParams: Extract capture types into a record row
@@ -132,10 +224,15 @@ instance parseParamNumber :: ParseParam Number where
 -- | Parse a URL string into a record of typed path parameters
 -- |
 -- | Examples:
--- |   parsePath @(Path @"users") "/users" = Just {}
--- |   parsePath @(Path (@"users" / Capture "id" Int)) "/users/123" = Just { id: 123 }
+-- |   parsePath @(Path Root) "/" = Just {}
+-- |   parsePath @(Path (Lit "users")) "/users" = Just {}
+-- |   parsePath @(Path (Lit "users" / Capture "id" Int)) "/users/123" = Just { id: 123 }
 class ParsePath (path :: Type) (params :: Row Type) | path -> params where
   parsePath :: Proxy path -> String -> Maybe (Record params)
+
+-- Base case: Root path - just verify it's "/"
+instance parsePathRoot :: ParsePath (Path Root) () where
+  parsePath _ url = if url == "/" then Just {} else Nothing
 
 -- Base case: Just a Lit segment, no captures - verify the path matches
 instance parsePathLit :: IsSymbol s => ParsePath (Path (Lit s)) () where

@@ -9,37 +9,16 @@ import Data.Symbol (class IsSymbol, reflectSymbol)
 import Type.RowList (class RowToList, RowList, Cons, Nil)
 import Data.String as String
 
--- Test if we can define a type-level infix operator for captures
-
--- Option 1: Try to define :> operator
-data Param (name :: Symbol) (ty :: Type)
-
-infixr 8 type Param as :>
+-- Import path types from production module
+import Yoga.Fastify.Om.Path (Path, PathCons, Param, QueryParams, type (/), type (:>), type (:?))
 
 -- Test usage
 type TestPath1 = "users" :> Int
-
--- Can we use it in a path?
-data Path (segments :: Type)
-
-data PathCons :: forall k1 k2. k1 -> k2 -> Type
-data PathCons left right
-
-infixr 6 type PathCons as /
 
 type TestPath3 = Path ("users" / "id" :> Int / "posts")
 
 -- Or simpler: just use the operator for params
 type TestPath4 = Path ("users" / "id" :> Int / "posts")
-
--- Query parameter operators
--- Use a record type since order doesn't matter for query params
--- QueryParams takes a path type and a row of query parameter types
-data QueryParams :: forall k. k -> Row Type -> Type
-data QueryParams path params
-
--- Use much lower precedence (1) so it applies last, after everything else
-infixl 1 type QueryParams as :?
 
 -- Test usage examples with record-based query params
 type TestPath5 = Path ("users" / "id" :> Int) :? (limit :: Int)
