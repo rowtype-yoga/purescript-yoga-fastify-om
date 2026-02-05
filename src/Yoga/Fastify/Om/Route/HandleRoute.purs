@@ -4,12 +4,14 @@ module Yoga.Fastify.Om.Route.HandleRoute
 
 import Prelude
 
+import Data.Array as Array
 import Data.Array.NonEmpty as NEA
-import Data.Either (Either(..))
+import Data.Either (Either(..), blush)
+import Data.Foldable (foldMap)
+import Data.Maybe (Maybe(..))
 import Data.String as String
 import Effect (Effect)
 import Effect.Class (liftEffect)
-import Foreign (unsafeToForeign)
 import Prim.Row as Row
 import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Fastify (Fastify, FastifyReply, FastifyRequest, HTTPMethod(..), RouteURL(..), StatusCode(..))
@@ -23,7 +25,7 @@ import Yoga.Fastify.Om.Route.ParseHeaders (class ParseHeaders, parseHeaders)
 import Yoga.Fastify.Om.Route.ParsePathParams (class ParsePathParams, parsePathParams)
 import Yoga.Fastify.Om.Route.ParseQueryParams (class ParseQueryParamsFromObject, parseQueryParamsFromObject)
 import Yoga.Fastify.Om.Route.RenderMethod (class RenderMethod, renderMethod)
-import Yoga.JSON (writeJSON)
+import Yoga.JSON (writeJSON, write)
 
 handleRoute
   :: forall method segments partialRequest o_ fullHeaders fullEncoding respVariant
@@ -59,23 +61,33 @@ handleRoute _ handler fastify =
     headersObj <- liftEffect $ F.headers req
     bodyMaybe <- liftEffect $ F.body req
 
-    case parsePathParams (Proxy :: Proxy pathParams) paramsObj of
-      Left errs -> send400 reply (writeJSON { error: "Invalid path parameters", details: errs })
-      Right path ->
-        case parseQueryParamsFromObject (Proxy :: Proxy queryParams) queryObj of
-          Left errs -> send400 reply (writeJSON { error: "Invalid query parameters", details: errs })
-          Right query ->
-            case parseHeaders (Proxy :: Proxy fullHeaders) headersObj of
-              Left errs -> send400 reply (writeJSON { error: "Invalid request headers", details: map show (NEA.toArray errs) })
-              Right headers ->
-                case parseBody (Proxy :: Proxy fullEncoding) bodyMaybe of
-                  Left err -> send400 reply (writeJSON { error: "Invalid request body", details: [ err ] })
-                  Right body -> do
-                    result <- handler { path, query, headers, body }
-                    handleResponse (Proxy :: Proxy respVariant) result reply
+    let
+      pathResult = parsePathParams (Proxy :: Proxy pathParams) paramsObj
+      queryResult = parseQueryParamsFromObject (Proxy :: Proxy queryParams) queryObj
+      headersResult = parseHeaders (Proxy :: Proxy fullHeaders) headersObj
+      bodyResult = parseBody (Proxy :: Proxy fullEncoding) bodyMaybe
+
+      tagField field err = { field, error: err }
+
+      collectErrors = Array.concat
+        [ pathResult # blush # foldMap (map (tagField "path"))
+        , queryResult # blush # foldMap (map (tagField "query"))
+        , headersResult # blush # foldMap (NEA.toArray >>> map (show >>> tagField "headers"))
+        , bodyResult # blush # foldMap (pure >>> map (tagField "body"))
+        ]
+
+    case NEA.fromArray collectErrors of
+      Nothing ->
+        case pathResult, queryResult, headersResult, bodyResult of
+          Right path, Right query, Right headers, Right body -> do
+            result <- handler { path, query, headers, body }
+            handleResponse (Proxy :: Proxy respVariant) result reply
+          _, _, _, _ -> pure unit -- impossible
+      Just errors ->
+        send400 reply (writeJSON { error: "Invalid request", details: errors })
 
   send400 :: FastifyReply -> String -> _
   send400 reply errorJson = do
     void $ liftEffect $ F.status (StatusCode 400) reply
     void $ liftEffect $ F.header "content-type" "application/json" reply
-    F.send (unsafeToForeign errorJson) reply
+    F.send (write errorJson) reply
