@@ -3,6 +3,7 @@ module Test.ParserTest where
 import Prelude
 
 import Data.Maybe (Maybe(..))
+import Data.Either (Either(..))
 import Data.String (Pattern(..))
 import Data.String as String
 import Data.Int as Int
@@ -185,7 +186,11 @@ test6 = parsePathSegments (Proxy :: Proxy TestPath) "/users/hello/posts"
 -- Should return: Nothing (can't parse "hello" as Int)
 
 -- Now let's add query parameter parsing
--- Query params should be optional (Maybe values)
+-- Query params can be optional (Maybe values) or required (Required wrapper)
+
+-- Type-level marker for required query params
+data Required :: Type -> Type
+data Required a
 
 -- Helper to parse query string into key-value pairs
 parseQueryString :: String -> Array { key :: String, value :: String }
@@ -215,21 +220,44 @@ parseQueryParam queryString paramName =
       Just { value } -> map _.value (parseCapture ("/" <> value))
       Nothing -> Nothing
 
--- Build a record of query params (all as Maybe values)
+-- Build a record of query params (Required becomes plain type, others become Maybe)
+-- Returns Either with missing required params as errors
 class ParseQueryParams :: Row Type -> Row Type -> Constraint
 class ParseQueryParams params result | params -> result where
-  parseQueryParams :: Proxy params -> String -> Record result
+  parseQueryParams :: Proxy params -> String -> Either (Array String) (Record result)
 
--- We need to convert each param type to Maybe type and build the record
+-- We need to handle Required vs optional params differently
 -- This requires RowToList to iterate over the params
 class ParseQueryParamsList :: RowList Type -> Row Type -> Constraint
 class ParseQueryParamsList list result | list -> result where
-  parseQueryParamsList :: Proxy list -> String -> Record result
+  parseQueryParamsList :: Proxy list -> String -> Either (Array String) (Record result)
 
 instance parseQueryParamsListNil :: ParseQueryParamsList Nil () where
-  parseQueryParamsList _ _ = {}
+  parseQueryParamsList _ _ = Right {}
 
-instance parseQueryParamsListCons ::
+-- Required param: must be present or we error
+instance parseQueryParamsListConsRequired ::
+  ( IsSymbol name
+  , ParseCapture ty
+  , ParseQueryParamsList tail tailResult
+  , Row.Cons name ty tailResult result
+  , Row.Lacks name tailResult
+  ) =>
+  ParseQueryParamsList (Cons name (Required ty) tail) result where
+  parseQueryParamsList _ queryString =
+    let
+      paramName = reflectSymbol (Proxy :: Proxy name)
+      value = parseQueryParam queryString paramName
+      restResult = parseQueryParamsList (Proxy :: Proxy tail) queryString
+    in
+      case value, restResult of
+        Just v, Right rest -> Right $ Builder.build (Builder.insert (Proxy :: Proxy name) v) rest
+        Nothing, Right _ -> Left [ "Missing required query parameter: " <> paramName ]
+        Just _, Left errs -> Left errs
+        Nothing, Left errs -> Left ([ "Missing required query parameter: " <> paramName ] <> errs)
+
+-- Optional param: always succeeds with Maybe
+else instance parseQueryParamsListConsOptional ::
   ( IsSymbol name
   , ParseCapture ty
   , ParseQueryParamsList tail tailResult
@@ -241,9 +269,11 @@ instance parseQueryParamsListCons ::
     let
       paramName = reflectSymbol (Proxy :: Proxy name)
       value = parseQueryParam queryString paramName
-      rest = parseQueryParamsList (Proxy :: Proxy tail) queryString
+      restResult = parseQueryParamsList (Proxy :: Proxy tail) queryString
     in
-      Builder.build (Builder.insert (Proxy :: Proxy name) value) rest
+      case restResult of
+        Right rest -> Right $ Builder.build (Builder.insert (Proxy :: Proxy name) value) rest
+        Left errs -> Left errs
 
 instance parseQueryParamsImpl ::
   ( RowToList params list
@@ -253,9 +283,10 @@ instance parseQueryParamsImpl ::
   parseQueryParams _ = parseQueryParamsList (Proxy :: Proxy list)
 
 -- Now parse a complete path with query params
+-- Returns Either with errors for invalid paths or missing required query params
 class ParseFullPath :: forall k. k -> Row Type -> Row Type -> Row Type -> Constraint
 class ParseFullPath path queryParams pathResult queryResult | path queryParams -> pathResult queryResult where
-  parseFullPath :: Proxy path -> Proxy queryParams -> String -> Maybe { path :: Record pathResult, query :: Record queryResult }
+  parseFullPath :: Proxy path -> Proxy queryParams -> String -> Either (Array String) { path :: Record pathResult, query :: Record queryResult }
 
 instance parseFullPathImpl ::
   ( ParsePathSegments segments pathResult
@@ -271,26 +302,46 @@ instance parseFullPathImpl ::
     in
       case parsePathSegments (Proxy :: Proxy segments) pathPart of
         Just { captures: pathCaptures, remaining: "" } ->
-          Just { path: pathCaptures, query: parseQueryParams (Proxy :: Proxy queryParams) queryPart }
-        _ -> Nothing
+          case parseQueryParams (Proxy :: Proxy queryParams) queryPart of
+            Right query -> Right { path: pathCaptures, query }
+            Left errs -> Left errs
+        _ -> Left [ "Invalid path: " <> pathPart ]
 
--- Test with query params!
+-- Test with optional query params
 type TestPathWithQuery = Path ("users" / "id" :> Int / "posts") :? (limit :: Int, offset :: Int)
 
-test7 :: Maybe { path :: { id :: Int }, query :: { limit :: Maybe Int, offset :: Maybe Int } }
+test7 :: Either (Array String) { path :: { id :: Int }, query :: { limit :: Maybe Int, offset :: Maybe Int } }
 test7 = parseFullPath (Proxy :: Proxy TestPathWithQuery) (Proxy :: Proxy (limit :: Int, offset :: Int)) "/users/124/posts?limit=10&offset=20"
 
--- Should return: Just { path: { id: 124 }, query: { limit: Just 10, offset: Just 20 } }
+-- Should return: Right { path: { id: 124 }, query: { limit: Just 10, offset: Just 20 } }
 
-test8 :: Maybe { path :: { id :: Int }, query :: { limit :: Maybe Int, offset :: Maybe Int } }
+test8 :: Either (Array String) { path :: { id :: Int }, query :: { limit :: Maybe Int, offset :: Maybe Int } }
 test8 = parseFullPath (Proxy :: Proxy TestPathWithQuery) (Proxy :: Proxy (limit :: Int, offset :: Int)) "/users/124/posts?limit=10"
 
--- Should return: Just { path: { id: 124 }, query: { limit: Just 10, offset: Nothing } }
+-- Should return: Right { path: { id: 124 }, query: { limit: Just 10, offset: Nothing } }
 
-test9 :: Maybe { path :: { id :: Int }, query :: { limit :: Maybe Int, offset :: Maybe Int } }
+test9 :: Either (Array String) { path :: { id :: Int }, query :: { limit :: Maybe Int, offset :: Maybe Int } }
 test9 = parseFullPath (Proxy :: Proxy TestPathWithQuery) (Proxy :: Proxy (limit :: Int, offset :: Int)) "/users/124/posts"
 
--- Should return: Just { path: { id: 124 }, query: { limit: Nothing, offset: Nothing } }
+-- Should return: Right { path: { id: 124 }, query: { limit: Nothing, offset: Nothing } }
+
+-- Test with Required query params
+type TestPathWithRequired = Path ("users" / "id" :> Int / "posts") :? (limit :: Required Int, offset :: Int)
+
+test10 :: Either (Array String) { path :: { id :: Int }, query :: { limit :: Int, offset :: Maybe Int } }
+test10 = parseFullPath (Proxy :: Proxy TestPathWithRequired) (Proxy :: Proxy (limit :: Required Int, offset :: Int)) "/users/124/posts?limit=10&offset=20"
+
+-- Should return: Right { path: { id: 124 }, query: { limit: 10, offset: Just 20 } }
+
+test11 :: Either (Array String) { path :: { id :: Int }, query :: { limit :: Int, offset :: Maybe Int } }
+test11 = parseFullPath (Proxy :: Proxy TestPathWithRequired) (Proxy :: Proxy (limit :: Required Int, offset :: Int)) "/users/124/posts?limit=10"
+
+-- Should return: Right { path: { id: 124 }, query: { limit: 10, offset: Nothing } }
+
+test12 :: Either (Array String) { path :: { id :: Int }, query :: { limit :: Int, offset :: Maybe Int } }
+test12 = parseFullPath (Proxy :: Proxy TestPathWithRequired) (Proxy :: Proxy (limit :: Required Int, offset :: Int)) "/users/124/posts"
+
+-- Should return: Left ["Missing required query parameter: limit"]
 
 main :: Effect Unit
 main = do
@@ -303,7 +354,11 @@ main = do
   log "\nTesting complete path parsing:"
   logShow $ "parse '/users/124/posts': " <> show test5
   logShow $ "parse '/users/hello/posts' (should fail): " <> show test6
-  log "\nTesting path with query params:"
+  log "\nTesting path with optional query params:"
   logShow $ "parse '/users/124/posts?limit=10&offset=20': " <> show test7
   logShow $ "parse '/users/124/posts?limit=10': " <> show test8
   logShow $ "parse '/users/124/posts': " <> show test9
+  log "\nTesting path with Required query params:"
+  logShow $ "parse '/users/124/posts?limit=10&offset=20': " <> show test10
+  logShow $ "parse '/users/124/posts?limit=10': " <> show test11
+  logShow $ "parse '/users/124/posts' (should error): " <> show test12
