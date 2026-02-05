@@ -8,5 +8,19 @@
     "url": "https://github.com/rowtype-yoga/purescript-yoga-backend-stack.git",
     "directory": "packages/yoga-fastify-om"
   },
-  "keywords": ["purescript", "ffi", "bindings", "yoga"]
+  "keywords": [
+    "purescript",
+    "ffi",
+    "bindings",
+    "yoga"
+  ],
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0",
+    "jsdom": "^24.0.0"
+  }
 }
