@@ -1,6 +1,22 @@
 workspace:
   package_set:
     registry: 51.1.0
+  extra_packages:
+    yoga-om:
+      path: ../purescript-yoga-om
+    yoga-fastify:
+      path: ../purescript-yoga-fastify
+    yoga-om-layer:
+      path: ../purescript-yoga-om-layer
+    vitest:
+      git: https://github.com/rowtype-yoga/purescript-vitest.git
+      ref: v1.0.0
+      dependencies:
+        - effect
+        - prelude
+        - foldable-traversable
+        - maybe
+        - web-html
 
 package:
   name: yoga-fastify-om
@@ -17,14 +33,15 @@ package:
     - effect: ">=4.0.0 <5.0.0"
     - prelude: ">=6.0.0 <7.0.0"
     - routing-duplex: ">=0.7.0 <0.8.0"
-    - yoga-fastify: "*"
+    - yoga-fastify
     - yoga-json: ">=5.0.0 <6.0.0"
-    - yoga-om-core: ">=1.0.0 <2.0.0"
-    - yoga-om-layer: ">=1.0.0 <2.0.0"
+    - yoga-om
+    - yoga-om-layer
   test:
     main: Test.Main
     dependencies:
       - spec: ">=7.0.0 <8.0.0"
+      - vitest: ">=1.0.0 <2.0.0"
       - console: ">=6.0.0 <7.0.0"
       - exceptions: ">=6.0.0 <7.0.0"
       - foreign: ">=7.0.0 <8.0.0"
@@ -32,3 +49,6 @@ package:
       - either: ">=6.0.0 <7.0.0"
       - foreign-object: ">=4.0.0 <5.0.0"
       - routing-duplex: ">=0.7.0 <0.8.0"
+      - arrays: ">=7.0.0 <8.0.0"
+      - strings: ">=6.0.0 <7.0.0"
+      - integers: ">=6.0.0 <7.0.0"

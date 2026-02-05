@@ -34,12 +34,10 @@ apiRoute = RD.root $ RG.sum
   , "GetUser": "users" / "1" / RG.noArgs
   }
 
-type AppContext = ()
-
 type CreateUserRequest = { body :: RequestBody CreateUserReq }
 type CreateUserResponse = { body :: User }
 
-createUserHandler :: E.EndpointHandler AppContext () ApiRoute CreateUserRequest CreateUserResponse
+createUserHandler :: E.EndpointHandler () () ApiRoute CreateUserRequest CreateUserResponse
 createUserHandler { path, request } =
   case path, request.body of
     CreateUser, JSONBody { name, email } -> pure { body: { id: 1, name, email } }
@@ -52,7 +50,7 @@ type ListUsersRequest =
 
 type ListUsersResponse = { body :: Array User }
 
-listUsersHandler :: E.EndpointHandler AppContext () ApiRoute ListUsersRequest ListUsersResponse
+listUsersHandler :: E.EndpointHandler () () ApiRoute ListUsersRequest ListUsersResponse
 listUsersHandler { request } = do
   let { page, limit } = request.query
   pure
@@ -71,7 +69,7 @@ type AuthenticatedCreateResponse =
   E.Response ("Location" :: String, "X-Request-Id" :: String) User
 
 authenticatedCreateHandler
-  :: E.EndpointHandler AppContext () ApiRoute AuthenticatedCreateRequest AuthenticatedCreateResponse
+  :: E.EndpointHandler () () ApiRoute AuthenticatedCreateRequest AuthenticatedCreateResponse
 authenticatedCreateHandler { path, request } =
   case path, request.body of
     CreateUser, JSONBody { name, email } -> do
@@ -107,7 +105,7 @@ type FullCreateResponse =
     User
 
 fullCreateHandler
-  :: E.EndpointHandler AppContext () ApiRoute FullCreateRequest FullCreateResponse
+  :: E.EndpointHandler () () ApiRoute FullCreateRequest FullCreateResponse
 fullCreateHandler { path, request } =
   case path, request.body of
     CreateUser, JSONBody { name, email } -> do
@@ -139,7 +137,7 @@ fullCreateHandler { path, request } =
 
 type GetUserResponse = { body :: User }
 
-getUserHandler :: E.EndpointHandler AppContext () ApiRoute { body :: RequestBody Unit } GetUserResponse
+getUserHandler :: E.EndpointHandler () () ApiRoute { body :: RequestBody Unit } GetUserResponse
 getUserHandler { path } =
   case path of
     GetUser -> pure { body: { id: 1, name: "Alice", email: "alice@example.com" } }
