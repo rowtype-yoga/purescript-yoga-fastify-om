@@ -282,7 +282,7 @@ instance parseFullPathImpl ::
   ( ParsePathSegments segments pathResult
   , ParseQueryParams queryParams queryResult
   ) =>
-  ParseFullPath (QueryParams (Path segments) queryParams) queryParams pathResult queryResult where
+  ParseFullPath (QueryParams (Path segments) (Record queryParams)) queryParams pathResult queryResult where
   parseFullPath _ _ input =
     let
       -- Split on ? to separate path and query
@@ -298,7 +298,7 @@ instance parseFullPathImpl ::
         _ -> Left [ "Invalid path: " <> pathPart ]
 
 -- Test with optional query params
-type TestPathWithQuery = Path ("users" / "id" :> Int / "posts") :? (limit :: Int, offset :: Int)
+type TestPathWithQuery = Path ("users" / "id" :> Int / "posts") :? { limit :: Int, offset :: Int }
 
 test7 :: Either (Array String) { path :: { id :: Int }, query :: { limit :: Maybe Int, offset :: Maybe Int } }
 test7 = parseFullPath (Proxy :: Proxy TestPathWithQuery) (Proxy :: Proxy (limit :: Int, offset :: Int)) "/users/124/posts?limit=10&offset=20"
@@ -316,7 +316,7 @@ test9 = parseFullPath (Proxy :: Proxy TestPathWithQuery) (Proxy :: Proxy (limit 
 -- Should return: Right { path: { id: 124 }, query: { limit: Nothing, offset: Nothing } }
 
 -- Test with Required query params
-type TestPathWithRequired = Path ("users" / "id" :> Int / "posts") :? (limit :: Required Int, offset :: Int)
+type TestPathWithRequired = Path ("users" / "id" :> Int / "posts") :? { limit :: Required Int, offset :: Int }
 
 test10 :: Either (Array String) { path :: { id :: Int }, query :: { limit :: Int, offset :: Maybe Int } }
 test10 = parseFullPath (Proxy :: Proxy TestPathWithRequired) (Proxy :: Proxy (limit :: Required Int, offset :: Int)) "/users/124/posts?limit=10&offset=20"

@@ -1,5 +1,8 @@
 module Yoga.Fastify.Om.Route.Handler
   ( Handler
+  , Request
+  , class DefaultRequestFields
+  , class DefaultRequestFieldsRL
   , class SegmentPathParams
   , class SegmentQueryParams
   , class SegmentQueryParamsRL
@@ -19,6 +22,19 @@ import Yoga.Fastify.Om.Path (Path, PathCons, Capture, Param, QueryParams, Requir
 import Yoga.Fastify.Om.Route.Encoding (JSON, NoBody)
 
 --------------------------------------------------------------------------------
+-- Request Type Alias
+--------------------------------------------------------------------------------
+
+-- | Type alias for the request parameter of a Route.
+-- |
+-- | Usage:
+-- |   Request ()                                    -- no headers or body
+-- |   Request (body :: JSON User)                   -- body only
+-- |   Request (headers :: { auth :: String })       -- headers only
+-- |   Request (body :: JSON User, headers :: { auth :: String })  -- both
+type Request r = Record r
+
+--------------------------------------------------------------------------------
 -- Handler Type
 --------------------------------------------------------------------------------
 
@@ -27,23 +43,17 @@ import Yoga.Fastify.Om.Route.Encoding (JSON, NoBody)
 -- | Usage:
 -- |   myHandler :: Handler (id :: Int) (limit :: Maybe Int) (authorization :: BearerToken) User
 -- |     (ok :: ResponseData () (Array Post), notFound :: ResponseData () ErrorMessage)
--- |   myHandler { path, query, requestHeaders, requestBody } = do
+-- |   myHandler { path, query, headers, body } = do
 -- |     -- path :: { id :: Int }
 -- |     -- query :: { limit :: Maybe Int }
--- |     -- requestHeaders :: { authorization :: BearerToken }
--- |     -- requestBody :: User
+-- |     -- headers :: { authorization :: BearerToken }
+-- |     -- body :: User
 -- |     pure $ respondNoHeaders (Proxy :: _ "ok") []
--- |
--- | At a route registration site, constraints tie these to the Route type:
--- |   SegmentPathParams segments pathParams =>
--- |   SegmentQueryParams segments queryParams =>
--- |   EncodingBody reqBody body =>
--- |   Handler pathParams queryParams reqHeaders body respVariant
 type Handler pathParams queryParams reqHeaders body respVariant =
   { path :: Record pathParams
   , query :: Record queryParams
-  , requestHeaders :: Record reqHeaders
-  , requestBody :: body
+  , headers :: Record reqHeaders
+  , body :: body
   }
   -> Aff (Variant respVariant)
 
@@ -60,7 +70,7 @@ instance segmentPathParamsPath ::
 
 instance segmentPathParamsQueryParams ::
   CaptureParams segs params =>
-  SegmentPathParams (QueryParams (Path segs) q) params
+  SegmentPathParams (QueryParams (Path segs) (Record q)) params
 
 --------------------------------------------------------------------------------
 -- SegmentQueryParams: Extract query param row from segments
@@ -75,7 +85,7 @@ instance segmentQueryParamsQP ::
   ( RL.RowToList params rl
   , SegmentQueryParamsRL rl query
   ) =>
-  SegmentQueryParams (QueryParams path params) query
+  SegmentQueryParams (QueryParams path (Record params)) query
 
 -- | RowList-based processing of query param rows.
 -- | Required ty → ty (plain), otherwise → Maybe ty
@@ -147,11 +157,11 @@ instance encodingBodyNoBody :: EncodingBody NoBody Unit
 
 -- | Extract the headers row from a request record type.
 -- |
--- | The request is expected to be a Record with a `requestHeaders` field.
+-- | The request is expected to be a Record with a `headers` field.
 class RequestHeaders (request :: Type) (headers :: Row Type) | request -> headers
 
 instance requestHeadersRecord ::
-  ( Row.Cons "requestHeaders" (Record headers) _rest requestRow
+  ( Row.Cons "headers" (Record headers) _rest requestRow
   ) =>
   RequestHeaders (Record requestRow) headers
 
@@ -161,10 +171,50 @@ instance requestHeadersRecord ::
 
 -- | Extract the body encoding type from a request record type.
 -- |
--- | The request is expected to be a Record with a `requestBody` field.
+-- | The request is expected to be a Record with a `body` field.
 class RequestBody (request :: Type) (encoding :: Type) | request -> encoding
 
 instance requestBodyRecord ::
-  ( Row.Cons "requestBody" encoding _rest requestRow
+  ( Row.Cons "body" encoding _rest requestRow
   ) =>
   RequestBody (Record requestRow) encoding
+
+--------------------------------------------------------------------------------
+-- DefaultRequestFields: Compute defaults for missing request fields
+--------------------------------------------------------------------------------
+
+-- | Compute defaults for missing request fields using RowList.
+-- |
+-- | When a Request omits `headers`, defaults to `()`.
+-- | When a Request omits `body`, defaults to `NoBody`.
+class DefaultRequestFields (partialRequest :: Row Type) (fullHeaders :: Row Type) (fullEncoding :: Type) | partialRequest -> fullHeaders fullEncoding
+
+instance defaultRequestFieldsImpl ::
+  ( RL.RowToList partialRequest rl
+  , DefaultRequestFieldsRL rl partialRequest fullHeaders fullEncoding
+  ) =>
+  DefaultRequestFields partialRequest fullHeaders fullEncoding
+
+-- | RowList-based implementation
+class DefaultRequestFieldsRL (rl :: RL.RowList Type) (partialRequest :: Row Type) (fullHeaders :: Row Type) (fullEncoding :: Type) | rl partialRequest -> fullHeaders fullEncoding
+
+-- Empty list - no fields present, default both
+instance defaultFieldsRLNil :: DefaultRequestFieldsRL RL.Nil partialRequest () NoBody
+
+-- headers present
+instance defaultFieldsRLHeadersCons ::
+  ( DefaultRequestFieldsRL tail partialRequest () encoding
+  ) =>
+  DefaultRequestFieldsRL (RL.Cons "headers" (Record headers) tail) partialRequest headers encoding
+
+-- body present
+else instance defaultFieldsRLBodyCons ::
+  ( DefaultRequestFieldsRL tail partialRequest headers NoBody
+  ) =>
+  DefaultRequestFieldsRL (RL.Cons "body" encoding tail) partialRequest headers encoding
+
+-- Other fields (catch-all for unrecognized fields)
+else instance defaultFieldsRLOtherCons ::
+  ( DefaultRequestFieldsRL tail partialRequest headers encoding
+  ) =>
+  DefaultRequestFieldsRL (RL.Cons otherLabel otherType tail) partialRequest headers encoding

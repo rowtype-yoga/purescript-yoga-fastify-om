@@ -92,8 +92,8 @@ infixr 8 type Param as :>
 -- | Attach query parameters to a path
 -- |
 -- | Example:
--- |   Path ("users" / "id" :> Int) :? (limit :: Int, offset :: Required Int)
-data QueryParams :: forall k. k -> Row Type -> Type
+-- |   Path ("users" / "id" :> Int) :? { limit :: Int, offset :: Required Int }
+data QueryParams :: forall k. k -> Type -> Type
 data QueryParams path params
 
 infixl 1 type QueryParams as :?

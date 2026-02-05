@@ -13,7 +13,7 @@ import Effect.Aff (Aff)
 import Foreign.Object as FObject
 import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Om.Path (Root)
-import Yoga.Fastify.Om.Route (HeaderError(..), BearerToken(..), unBearerToken, class HeaderValue, parseHeader, printHeader, parseHeaders, Route, ResponseData, GET, POST, PUT, toOpenAPI, renderMethod, renderHeadersSchema, renderResponseHeadersSchema, renderResponseSchema, NoBody)
+import Yoga.Fastify.Om.Route (HeaderError(..), BearerToken(..), unBearerToken, class HeaderValue, parseHeader, printHeader, parseHeaders, Route, Request, ResponseData, GET, POST, PUT, toOpenAPI, renderMethod, renderHeadersSchema, renderResponseHeadersSchema, renderResponseSchema)
 import ViTest (ViTest, describe, test)
 import ViTest.Expect (expectToBe)
 import ViTest.Expect.Either (expectRight, expectIsLeft, expectLeftContains)
@@ -32,14 +32,14 @@ type ErrorMessage = { error :: String }
 
 -- Route with variant responses (ok and notFound)
 type TestRoute5 = Route GET Root
-  { requestHeaders :: {}, requestBody :: NoBody }
+  (Request ())
   ( ok :: ResponseData () User
   , notFound :: ResponseData () ErrorMessage
   )
 
 -- Route with variant responses including headers
 type TestRoute6 = Route POST Root
-  { requestHeaders :: { authorization :: String }, requestBody :: NoBody }
+  (Request (headers :: { authorization :: String }))
   ( created :: ResponseData ("Location" :: String) User
   , badRequest :: ResponseData () ErrorMessage
   , unauthorized :: ResponseData () ErrorMessage

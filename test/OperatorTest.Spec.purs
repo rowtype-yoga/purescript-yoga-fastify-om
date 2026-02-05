@@ -22,9 +22,9 @@ testRendering = describe "Path Rendering" $ do
     result # expectToEqual "/users/{id}/posts"
 
   _ <- test "renders path with query params" do
-    let result = Op.renderFullPath (Proxy :: Proxy (Path ("api" / "posts") :? (page :: Int, sort :: String)))
+    let result = Op.renderFullPath (Proxy :: Proxy (Path ("api" / "posts") :? { page :: Int, sort :: String }))
     expectToEqual "/api/posts?page={page}&sort={sort}" result
 
   test "renders complex path with captures and query params" do
-    let result = Op.renderFullPath (Proxy :: Proxy (Path ("api" / "users" / "id" :> Int / "posts") :? (limit :: Int, offset :: Int)))
+    let result = Op.renderFullPath (Proxy :: Proxy (Path ("api" / "users" / "id" :> Int / "posts") :? { limit :: Int, offset :: Int }))
     expectToEqual "/api/users/{id}/posts?limit={limit}&offset={offset}" result

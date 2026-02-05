@@ -10,7 +10,7 @@ import Effect.Aff (Aff)
 import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Fastify (StatusCode(..))
 import Yoga.Fastify.Om.Path (Root)
-import Yoga.Fastify.Om.Route (GET, POST, PUT, Route, ResponseData(..), respondNoHeaders, respondWith, respond, toOpenAPI, statusCodeFor, statusCodeToString, NoBody)
+import Yoga.Fastify.Om.Route (GET, POST, PUT, Route, Request, ResponseData(..), respondNoHeaders, respondWith, respond, toOpenAPI, statusCodeFor, statusCodeToString)
 import ViTest (ViTest, describe, test)
 import ViTest.Expect (expectToBe)
 
@@ -24,14 +24,14 @@ expectToEqual expected actual = expectToBe true (expected == actual)
 
 -- Simple variant route with ok and notFound responses
 type SimpleVariantRoute = Route GET Root
-  { requestHeaders :: {}, requestBody :: NoBody }
+  (Request ())
   ( ok :: ResponseData () String
   , notFound :: ResponseData () String
   )
 
 -- Variant route with multiple status codes
 type MultiStatusRoute = Route POST Root
-  { requestHeaders :: { authorization :: String }, requestBody :: NoBody }
+  (Request (headers :: { authorization :: String }))
   ( created :: ResponseData ("Location" :: String) User
   , badRequest :: ResponseData () ErrorMessage
   , unauthorized :: ResponseData () ErrorMessage
@@ -39,7 +39,7 @@ type MultiStatusRoute = Route POST Root
 
 -- Variant route with many response types
 type ComplexVariantRoute = Route PUT Root
-  { requestHeaders :: {}, requestBody :: NoBody }
+  (Request ())
   ( ok :: ResponseData () User
   , created :: ResponseData ("Location" :: String) User
   , badRequest :: ResponseData () ErrorMessage
@@ -241,7 +241,7 @@ testSimpleVariantOpenAPI = describe "OpenAPI Generation - Simple Variant" $ do
     let
       result = toOpenAPI
         @( Route GET Root
-            { requestHeaders :: {}, requestBody :: NoBody }
+            (Request ())
             ( ok :: ResponseData () String
             , notFound :: ResponseData () String
             )
@@ -264,7 +264,7 @@ testComplexVariantOpenAPI = describe "OpenAPI Generation - Complex Variant" $ do
     let
       result = toOpenAPI
         @( Route POST Root
-            { requestHeaders :: { authorization :: String }, requestBody :: NoBody }
+            (Request (headers :: { authorization :: String }))
             ( created :: ResponseData ("Location" :: String) User
             , badRequest :: ResponseData () ErrorMessage
             , unauthorized :: ResponseData () ErrorMessage
@@ -298,7 +298,7 @@ testVariantWithHeaders = describe "OpenAPI Generation - Variant with Response He
     let
       result = toOpenAPI
         @( Route POST Root
-            { requestHeaders :: {}, requestBody :: NoBody }
+            (Request ())
             ( created :: ResponseData ("Location" :: String, "X-Request-Id" :: String) User
             )
         )

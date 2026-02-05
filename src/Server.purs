@@ -11,7 +11,7 @@ import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.Fastify.Om.Path (type (/), type (:?), Capture, Path)
-import Yoga.Fastify.Om.Route (GET, POST, Route, Handler, NoBody, JSON, ResponseData, handleRoute, respondNoHeaders)
+import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, ResponseData, handleRoute, respondNoHeaders)
 
 --------------------------------------------------------------------------------
 -- Example Types
@@ -28,9 +28,7 @@ type ErrorResponse = { error :: String }
 -- GET /health
 type HealthRoute = Route GET
   (Path "health")
-  { requestHeaders :: {}
-  , requestBody :: NoBody
-  }
+  (Request ())
   ( ok :: ResponseData () { status :: String }
   )
 
@@ -40,9 +38,7 @@ healthHandler _ = pure $ respondNoHeaders @"ok" { status: "healthy" }
 -- GET /users/:id
 type UserRoute = Route GET
   (Path ("users" / Capture "id" Int))
-  { requestHeaders :: {}
-  , requestBody :: NoBody
-  }
+  (Request ())
   ( ok :: ResponseData () User
   , notFound :: ResponseData () ErrorResponse
   )
@@ -62,10 +58,8 @@ userHandler { path } =
 
 -- GET /users?limit=10
 type UsersWithLimitRoute = Route GET
-  (Path "users" :? (limit :: Int))
-  { requestHeaders :: {}
-  , requestBody :: NoBody
-  }
+  (Path "users" :? { limit :: Int })
+  (Request ())
   ( ok :: ResponseData () { users :: Array User, limit :: Maybe Int }
   )
 
@@ -84,9 +78,7 @@ usersWithLimitHandler { query } = pure $ respondNoHeaders @"ok"
 -- POST /users
 type CreateUserRoute = Route POST
   (Path "users")
-  { requestHeaders :: {}
-  , requestBody :: JSON CreateUserRequest
-  }
+  (Request (body :: JSON CreateUserRequest))
   ( created :: ResponseData () User
   , badRequest :: ResponseData () ErrorResponse
   )
@@ -96,13 +88,13 @@ createUserHandler
        ( created :: ResponseData () User
        , badRequest :: ResponseData () ErrorResponse
        )
-createUserHandler { requestBody } =
-  if requestBody.name == "" then
+createUserHandler { body } =
+  if body.name == "" then
     pure $ respondNoHeaders @"badRequest"
       { error: "Name cannot be empty" }
   else
     pure $ respondNoHeaders @"created"
-      { id: 999, name: requestBody.name, email: requestBody.email }
+      { id: 999, name: body.name, email: body.email }
 
 --------------------------------------------------------------------------------
 -- Server Setup

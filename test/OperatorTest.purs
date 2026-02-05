@@ -21,13 +21,13 @@ type TestPath3 = Path ("users" / "id" :> Int / "posts")
 type TestPath4 = Path ("users" / "id" :> Int / "posts")
 
 -- Test usage examples with record-based query params
-type TestPath5 = Path ("users" / "id" :> Int) :? (limit :: Int)
+type TestPath5 = Path ("users" / "id" :> Int) :? { limit :: Int }
 
 -- Use a multi-segment path for this example
-type TestPath6 = Path ("api" / "posts") :? (page :: Int, sort :: String)
+type TestPath6 = Path ("api" / "posts") :? { page :: Int, sort :: String }
 
 -- More realistic example
-type TestPath7 = Path ("api" / "users" / "id" :> Int / "posts") :? (limit :: Int, offset :: Int, sort :: Boolean)
+type TestPath7 = Path ("api" / "users" / "id" :> Int / "posts") :? { limit :: Int, offset :: Int, sort :: Boolean }
 
 -- Rendering paths to OpenAPI format
 -- We need type classes to convert type-level structures to runtime strings
@@ -112,11 +112,11 @@ instance renderPathWithQueryInstance ::
 renderSimplePath :: forall path. RenderPath path => Proxy path -> String
 renderSimplePath = renderPath
 
--- Helper to render QueryParams type
+-- Helper to render QueryParams type (Record row → unwrap to row)
 renderFullPath
   :: forall path params
    . RenderPathWithQuery path params
-  => Proxy (QueryParams path params)
+  => Proxy (QueryParams path (Record params))
   -> String
 renderFullPath _ = renderPathWithQuery (Proxy :: Proxy path) (Proxy :: Proxy params)
 
@@ -127,7 +127,7 @@ test1 = renderSimplePath (Proxy :: Proxy TestPath4)
 -- Should produce: "/users/id/{id}/posts"
 
 test2 :: String
-test2 = renderFullPath (Proxy :: Proxy (Path ("api" / "posts") :? (page :: Int, sort :: String)))
+test2 = renderFullPath (Proxy :: Proxy (Path ("api" / "posts") :? { page :: Int, sort :: String }))
 
 -- Should produce: "/api/posts?page={page}&sort={sort}"
 

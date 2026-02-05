@@ -18,9 +18,9 @@ expectToEqual expected actual = expectToBe true (expected == actual)
 
 -- Type aliases for tests
 type TestPathSimple = "users" / "id" :> Int / "posts"
-type TestPathWithQuery = Path ("users" / "id" :> Int / "posts") :? (limit :: Int, offset :: Int)
-type TestPathWithRequired = Path ("users" / "id" :> Int / "posts") :? (limit :: Required Int, offset :: Int)
-type TestPathError = Path ("users" / "id" :> Int / "posts") :? (limit :: Int)
+type TestPathWithQuery = Path ("users" / "id" :> Int / "posts") :? { limit :: Int, offset :: Int }
+type TestPathWithRequired = Path ("users" / "id" :> Int / "posts") :? { limit :: Required Int, offset :: Int }
+type TestPathError = Path ("users" / "id" :> Int / "posts") :? { limit :: Int }
 
 -- Test segment parsing
 testSegmentParsing :: Effect ViTest
