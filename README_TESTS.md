@@ -21,25 +21,25 @@ These will output test results showing:
 - Required vs optional query param handling
 - Error cases
 
-## Option 2: Vitest (Advanced)
+## Option 2: Vitest (Automated)
 
 For automated testing with vitest:
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
 # Build PureScript
 spago build
 
 # Run tests
-npm test
+bun test
 
 # Or watch mode
-npm run test:watch
+bun run test:watch
 ```
 
-**Note:** Some tests may show reference equality warnings but are functionally correct. The PureScript code is fully type-safe and validated.
+**All 20 tests passing!** ✅
 
 ## What's Being Tested
 

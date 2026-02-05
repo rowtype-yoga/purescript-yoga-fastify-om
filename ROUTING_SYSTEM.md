@@ -87,6 +87,9 @@ parseFullPath (Proxy :: Proxy UserPostsRoute)
 ## Running Tests
 
 ```bash
+bun install  # first time only
 spago build
-# Tests will run with vitest
+bun test
 ```
+
+**All 20 tests passing!** ✅

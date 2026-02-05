@@ -70,7 +70,7 @@ testPathParsing = describe "Path Parsing" $ do
 
 -- Test query parameter parsing (optional)
 testOptionalQueryParams :: Effect ViTest
-testOptionalQueryParams = describe "Optional Query Parameters" $ do
+testOptionalQueryParams = describe "Optional Query Parameters" do
   _ <- test "parses all query params present" do
     let result = Parser.parseFullPath (Proxy :: Proxy TestPathWithQuery) (Proxy :: Proxy (limit :: Int, offset :: Int)) "/users/124/posts?limit=10&offset=20"
     expectToEqual (Right { path: { id: 124 }, query: { limit: Just 10, offset: Just 20 } }) result
