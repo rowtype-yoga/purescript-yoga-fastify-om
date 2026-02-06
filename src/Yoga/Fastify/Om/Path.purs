@@ -152,6 +152,10 @@ class PathPatternSegs segs where
 instance pathPatternSegsRoot :: PathPatternSegs Root where
   pathPatternSegs _ = "/"
 
+-- "/" symbol (alias for Root)
+else instance pathPatternSegsSlash :: PathPatternSegs "/" where
+  pathPatternSegs _ = "/"
+
 -- Lit wrapper
 else instance pathPatternSegsLit :: IsSymbol s => PathPatternSegs (Lit s) where
   pathPatternSegs _ = "/" <> reflectSymbol (Proxy :: Proxy s)
