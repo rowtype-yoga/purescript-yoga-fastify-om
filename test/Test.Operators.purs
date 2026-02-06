@@ -8,6 +8,7 @@ import ParserTest.Spec as ParserTest
 import RouteTest.Spec as RouteTest
 import VariantResponseTest.Spec as VariantResponseTest
 import HandleRouteTest.Spec as HandleRouteTest
+import MetadataValidationTest.Spec as MetadataValidationTest
 
 spec :: Effect ViTest
 spec = do
@@ -28,6 +29,9 @@ spec = do
   _ <- RouteTest.testRenderHeadersSchema
   _ <- RouteTest.testRenderResponseHeadersSchema
   _ <- RouteTest.testRenderResponseSchema
+  _ <- RouteTest.testRenderPathParamsSchema
+  _ <- RouteTest.testRenderQueryParamsSchema
+  _ <- RouteTest.testRenderRequestBodySchema
   _ <- RouteTest.testToOpenAPI
   _ <- VariantResponseTest.testStatusCodeMapping
   _ <- VariantResponseTest.testStatusCodeToString
@@ -40,7 +44,13 @@ spec = do
   _ <- VariantResponseTest.testVariantPatternMatching
   _ <- HandleRouteTest.testParsePathParams
   _ <- HandleRouteTest.testParseQueryParams
-  HandleRouteTest.testParseBody
+  _ <- HandleRouteTest.testParseBody
+  _ <- MetadataValidationTest.testPatternValidation
+  _ <- MetadataValidationTest.testMinLengthValidation
+  _ <- MetadataValidationTest.testMaxLengthValidation
+  _ <- MetadataValidationTest.testMinimumValidation
+  _ <- MetadataValidationTest.testMaximumValidation
+  MetadataValidationTest.testComposedValidation
 
 main :: ViTest
 main = viTest spec

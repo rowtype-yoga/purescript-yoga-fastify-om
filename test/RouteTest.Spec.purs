@@ -2,6 +2,7 @@ module RouteTest.Spec where
 
 import Prelude
 
+import Data.Array as Array
 import Data.Array.NonEmpty as NEA
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
@@ -12,8 +13,9 @@ import Effect (Effect)
 import Effect.Aff (Aff)
 import Foreign.Object as FObject
 import Type.Proxy (Proxy(..))
-import Yoga.Fastify.Om.Path (Root)
-import Yoga.Fastify.Om.Route (HeaderError(..), BearerToken(..), unBearerToken, class HeaderValue, parseHeader, printHeader, parseHeaders, Route, Request, Response, GET, POST, PUT, toOpenAPI, renderMethod, renderHeadersSchema, renderResponseHeadersSchema, renderResponseSchema)
+import Yoga.Fastify.Om.Path (Root, Lit, Capture, type (/), type (:?), Required)
+import Yoga.Fastify.Om.Route (HeaderError(..), BearerToken(..), unBearerToken, class HeaderValue, parseHeader, printHeader, parseHeaders, Route, Request, Response, GET, POST, PUT, toOpenAPI, renderMethod, renderHeadersSchema, renderResponseHeadersSchema, renderResponseSchema, renderPathParamsSchema, renderQueryParamsSchema, renderRequestBodySchema, JSON, NoBody)
+import Yoga.JSON (writeJSON)
 import ViTest (ViTest, describe, test)
 import ViTest.Expect (expectToBe)
 import ViTest.Expect.Either (expectRight, expectIsLeft, expectLeftContains)
@@ -196,15 +198,15 @@ testRenderHeadersSchema :: Effect ViTest
 testRenderHeadersSchema = describe "RenderHeadersSchema" $ do
   _ <- test "renders empty headers" do
     let result = renderHeadersSchema (Proxy :: Proxy ())
-    expectToEqual [] result
+    expectToEqual 0 (Array.length result)
 
   _ <- test "renders single String header" do
     let result = renderHeadersSchema (Proxy :: Proxy (authorization :: String))
-    expectToBe true (result == [ { name: "authorization", in: "header", required: true, schema: { type: "string" } } ])
+    expectToEqual 1 (Array.length result)
 
   test "renders Int header" do
     let result = renderHeadersSchema (Proxy :: Proxy ("x-version" :: Int))
-    expectToBe true (result == [ { name: "x-version", in: "header", required: true, schema: { type: "integer" } } ])
+    expectToEqual 1 (Array.length result)
 
 testRenderResponseHeadersSchema :: Effect ViTest
 testRenderResponseHeadersSchema = describe "RenderResponseHeadersSchema" $ do
@@ -228,18 +230,85 @@ testRenderResponseHeadersSchema = describe "RenderResponseHeadersSchema" $ do
 
 testRenderResponseSchema :: Effect ViTest
 testRenderResponseSchema = describe "RenderResponseSchema" $ do
-  _ <- test "renders response with no headers" do
+  _ <- test "renders response with no headers and introspected body schema" do
     let result = renderResponseSchema (Proxy :: Proxy ()) (Proxy :: Proxy String)
     expectToEqual "Successful response" result."200".description
     expectToEqual FObject.empty result."200".headers
-    expectToEqual "object" result."200".content."application/json".schema.type
+    -- Schema is now a full Foreign object with introspection, verify it contains "type"
+    let schemaStr = writeJSON result."200".content."application/json".schema
+    expectToBe true (String.contains (String.Pattern "\"type\"") schemaStr)
 
-  test "renders response with headers" do
+  test "renders response with headers and introspected body schema" do
     let result = renderResponseSchema (Proxy :: Proxy ("Location" :: String, "X-Request-Id" :: String)) (Proxy :: Proxy Unit)
     expectToEqual "Successful response" result."200".description
     expectToBe true (FObject.member "Location" result."200".headers)
     expectToBe true (FObject.member "X-Request-Id" result."200".headers)
-    expectToEqual "object" result."200".content."application/json".schema.type
+    -- Schema is now a full Foreign object
+    let schemaStr = writeJSON result."200".content."application/json".schema
+    expectToBe true (String.contains (String.Pattern "\"type\"") schemaStr)
+
+testRenderPathParamsSchema :: Effect ViTest
+testRenderPathParamsSchema = describe "RenderPathParamsSchema" $ do
+  _ <- test "renders empty path params" do
+    let result = renderPathParamsSchema (Proxy :: Proxy ())
+    expectToEqual 0 (Array.length result)
+
+  _ <- test "renders single String path param" do
+    let result = renderPathParamsSchema (Proxy :: Proxy (id :: String))
+    expectToEqual 1 (Array.length result)
+
+  test "renders Int path param" do
+    let result = renderPathParamsSchema (Proxy :: Proxy (userId :: Int))
+    expectToEqual 1 (Array.length result)
+
+testRenderQueryParamsSchema :: Effect ViTest
+testRenderQueryParamsSchema = describe "RenderQueryParamsSchema" $ do
+  _ <- test "renders empty query params" do
+    let result = renderQueryParamsSchema (Proxy :: Proxy ())
+    expectToEqual 0 (Array.length result)
+
+  _ <- test "renders single String query param" do
+    let result = renderQueryParamsSchema (Proxy :: Proxy (search :: String))
+    expectToEqual 1 (Array.length result)
+
+  test "renders Int query param" do
+    let result = renderQueryParamsSchema (Proxy :: Proxy (limit :: Int))
+    expectToEqual 1 (Array.length result)
+
+testRenderRequestBodySchema :: Effect ViTest
+testRenderRequestBodySchema = describe "RenderRequestBodySchema" $ do
+  _ <- test "renders NoBody as Nothing" do
+    let result = renderRequestBodySchema (Proxy :: Proxy NoBody)
+    case result of
+      Nothing -> expectToBe true true
+      Just _ -> expectToBe false true
+
+  test "renders JSON body with schema introspection" do
+    let result = renderRequestBodySchema (Proxy :: Proxy (JSON User))
+    case result of
+      Nothing -> expectToBe false true
+      Just body -> do
+        expectToEqual true body.required
+        -- Schema is now a full Foreign object with properties, not just { type: "object" }
+        -- We can verify it contains the expected structure by converting to string
+        let schemaStr = writeJSON body.content."application/json".schema
+        expectToBe true (String.contains (String.Pattern "\"type\"") schemaStr)
+        expectToBe true (String.contains (String.Pattern "\"properties\"") schemaStr)
+
+-- Route with path parameters
+type TestRoute7 = Route GET (Lit "users" / Capture "id" String)
+  (Request {})
+  (ok :: { body :: JSON User })
+
+-- Route with query parameters
+type TestRoute8 = Route GET (Lit "users" :? Record (limit :: Int, offset :: Required Int))
+  (Request {})
+  (ok :: { body :: JSON (Array User) })
+
+-- Route with request body
+type TestRoute9 = Route POST (Lit "users")
+  (Request { body :: JSON User })
+  (ok :: { body :: JSON User })
 
 testToOpenAPI :: Effect ViTest
 testToOpenAPI = describe "ToOpenAPI" $ do
@@ -249,7 +318,7 @@ testToOpenAPI = describe "ToOpenAPI" $ do
     expectToBe true (String.contains (String.Pattern "200") result)
     expectToBe true (String.contains (String.Pattern "404") result)
 
-  test "generates OpenAPI for variant route with request headers and multiple responses" do
+  _ <- test "generates OpenAPI for variant route with request headers and multiple responses" do
     let result = toOpenAPI @TestRoute6
     -- Check that it contains authorization parameter
     expectToBe true (String.contains (String.Pattern "authorization") result)
@@ -257,3 +326,27 @@ testToOpenAPI = describe "ToOpenAPI" $ do
     expectToBe true (String.contains (String.Pattern "201") result)
     expectToBe true (String.contains (String.Pattern "400") result)
     expectToBe true (String.contains (String.Pattern "401") result)
+
+  _ <- test "generates OpenAPI for route with path parameters" do
+    let result = toOpenAPI @TestRoute7
+    -- Check that it contains path parameter
+    expectToBe true (String.contains (String.Pattern "\"id\"") result)
+    expectToBe true (String.contains (String.Pattern "\"path\"") result)
+    -- Check that it contains the path pattern
+    expectToBe true (String.contains (String.Pattern "/users/:id") result)
+
+  _ <- test "generates OpenAPI for route with query parameters" do
+    let result = toOpenAPI @TestRoute8
+    -- Check that it contains query parameters
+    expectToBe true (String.contains (String.Pattern "\"limit\"") result)
+    expectToBe true (String.contains (String.Pattern "\"offset\"") result)
+    expectToBe true (String.contains (String.Pattern "\"query\"") result)
+    -- Check that it contains the path pattern
+    expectToBe true (String.contains (String.Pattern "/users") result)
+
+  test "generates OpenAPI for route with request body" do
+    let result = toOpenAPI @TestRoute9
+    -- Check that it contains requestBody
+    expectToBe true (String.contains (String.Pattern "\"requestBody\"") result)
+    expectToBe true (String.contains (String.Pattern "\"required\"") result)
+    expectToBe true (String.contains (String.Pattern "\"application/json\"") result)

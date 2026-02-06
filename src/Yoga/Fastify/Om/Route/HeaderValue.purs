@@ -68,8 +68,8 @@ class HeaderValueType (ty :: Type) where
 instance HeaderValueType String where
   headerValueType _ = "string"
 
-instance HeaderValueType Int where
+else instance HeaderValueType Int where
   headerValueType _ = "integer"
 
-instance HeaderValueType a => HeaderValueType (Maybe a) where
+else instance HeaderValueType a => HeaderValueType (Maybe a) where
   headerValueType _ = headerValueType (Proxy :: Proxy a)

@@ -8,7 +8,8 @@ import Prelude
 import Data.Either (Either(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.String as String
-import Yoga.Fastify.Om.Route.HeaderValue (class HeaderValue)
+import Type.Proxy (Proxy(..))
+import Yoga.Fastify.Om.Route.HeaderValue (class HeaderValue, class HeaderValueType)
 
 --------------------------------------------------------------------------------
 -- BearerToken
@@ -37,3 +38,6 @@ instance HeaderValue BearerToken where
     else Left "missing 'Bearer ' prefix"
 
   printHeader (BearerToken token) = "Bearer " <> token
+
+instance HeaderValueType BearerToken where
+  headerValueType _ = "string"

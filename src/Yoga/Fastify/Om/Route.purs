@@ -6,6 +6,7 @@ module Yoga.Fastify.Om.Route
   , module Yoga.Fastify.Om.Route.ParseHeaders
   , module Yoga.Fastify.Om.Route.RenderMethod
   , module Yoga.Fastify.Om.Route.OpenAPI
+  , module Yoga.Fastify.Om.Route.OpenAPIMetadata
   , module Yoga.Fastify.Om.Route.RouteHandler
   , module Yoga.Fastify.Om.Route.Handler
   , module Yoga.Fastify.Om.Route.Encoding
@@ -32,7 +33,8 @@ import Yoga.Fastify.Om.Route.Handler (HandlerFn, Request, class SegmentPathParam
 import Yoga.Fastify.Om.Route.HeaderError (HeaderError(..))
 import Yoga.Fastify.Om.Route.HeaderValue (class HeaderValue, class HeaderValueType, headerValueType, parseHeader, printHeader)
 import Yoga.Fastify.Om.Route.Method (DELETE, GET, PATCH, POST, PUT)
-import Yoga.Fastify.Om.Route.OpenAPI (class RenderHeadersSchema, class RenderHeadersSchemaRL, class RenderResponseHeadersSchema, class RenderResponseHeadersSchemaRL, class RenderResponseSchema, class RenderVariantResponseSchemaRL, class ToOpenAPI, renderHeadersSchema, renderHeadersSchemaRL, renderResponseHeadersSchema, renderResponseHeadersSchemaRL, renderResponseSchema, renderVariantResponseSchemaRL, toOpenAPI)
+import Yoga.Fastify.Om.Route.OpenAPI (class CollectOperations, collectOperations, buildOpenAPISpec, OpenAPISpec, class RenderHeadersSchema, class RenderHeadersSchemaRL, class RenderPathParamsSchema, class RenderPathParamsSchemaRL, class RenderQueryParamsSchema, class RenderQueryParamsSchemaRL, class RenderRequestBodySchema, class RenderResponseHeadersSchema, class RenderResponseHeadersSchemaRL, class RenderResponseSchema, class RenderVariantResponseSchemaRL, class ToOpenAPI, renderHeadersSchema, renderHeadersSchemaRL, renderPathParamsSchema, renderPathParamsSchemaRL, renderQueryParamsSchema, renderQueryParamsSchemaRL, renderRequestBodySchema, renderResponseHeadersSchema, renderResponseHeadersSchemaRL, renderResponseSchema, renderVariantResponseSchemaRL, toOpenAPI)
+import Yoga.Fastify.Om.Route.OpenAPIMetadata (class HasDescription, description, class HasExample, example, class HasFormat, format, class HasMinimum, minimum, class HasMaximum, maximum, class HasPattern, pattern, class HasMinLength, minLength, class HasMaxLength, maxLength, class HasTitle, title, class HasNullable, nullable, class HasDefault, default, class HasDeprecated, deprecated, class HasOperationMetadata, operationMetadata, OperationMetadata, Description, Example, Format, Minimum, Maximum, Pattern, MinLength, MaxLength, Title, Nullable, Default, Deprecated)
 import Yoga.Fastify.Om.Route.ParseBody (class ParseBody, parseBody)
 import Yoga.Fastify.Om.Route.ParseHeaders (class ParseHeaders, class ParseHeadersRL, parseHeaders, parseHeadersRL)
 import Yoga.Fastify.Om.Route.ParsePathParams (class ParsePathParams, parsePathParams)
@@ -41,5 +43,5 @@ import Yoga.Fastify.Om.Route.RenderMethod (class RenderMethod, renderMethod)
 import Yoga.Fastify.Om.Route.Response (Response(..), ResponseData, respondNoHeaders, respondWith)
 import Yoga.Fastify.Om.Route.Route (Route(..), route, class ConvertResponseVariant, class ConvertResponseVariantRL)
 import Yoga.Fastify.Om.Route.SetHeaders (class SetHeaders, setHeaders)
-import Yoga.Fastify.Om.Route.OmHandler (handle, respond, respondWithHeaders, reject, rejectWithHeaders, class Is2xxStatus, class SplitResponse, class SplitResponseRL, class SplitResponseEntry, class BuildErrorHandlers, buildErrorHandlers)
+import Yoga.Fastify.Om.Route.OmHandler (handle, respond, respondWithHeaders, respondNow, respondNowWithHeaders, reject, rejectWithHeaders, class Is2xxStatus, class SplitResponse, class SplitResponseRL, class SplitResponseEntry, class BuildErrorHandlers, buildErrorHandlers)
 import Yoga.Fastify.Om.Route.StatusCode (class StatusCodeMap, statusCodeFor, statusCodeToString)

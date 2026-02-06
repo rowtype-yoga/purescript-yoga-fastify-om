@@ -6,15 +6,21 @@ module Yoga.Fastify.Om.Route.Response
   , respond
   , respondWith
   , respondNoHeaders
+  , respondNoBody
+  , respondNothing
+  , respondNoContent
+  , respondNotModified
   , module Data.Variant
   ) where
 
 import Data.Symbol (class IsSymbol)
+import Data.Unit (Unit, unit)
 import Data.Variant (Variant)
 import Data.Variant as Variant
 import Prim.Row (class Cons)
 import Prim.RowList as RL
 import Type.Proxy (Proxy(..))
+import Unsafe.Coerce (unsafeCoerce)
 
 --------------------------------------------------------------------------------
 -- Response Data Type
@@ -112,3 +118,53 @@ respondNoHeaders
   -> Variant r2
 respondNoHeaders body =
   Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body })
+
+-- | Construct a variant response with headers but no body
+-- |
+-- | Example:
+-- |   respondNoBody (Proxy :: _ "noContent")
+-- |     { "X-Resource-Id": "123" }
+respondNoBody
+  :: forall label headers r1 r2
+   . IsSymbol label
+  => Cons label (Response headers Unit) r1 r2
+  => Proxy label
+  -> Record headers
+  -> Variant r2
+respondNoBody label headers =
+  Variant.inj label (Response { headers, body: unit })
+
+-- | Construct a variant response with neither headers nor body
+-- |
+-- | Example:
+-- |   respondNothing (Proxy :: _ "noContent")
+-- |   respondNothing (Proxy :: _ "notModified")
+respondNothing
+  :: forall @label r1 r2
+   . IsSymbol label
+  => Cons label (Response () Unit) r1 r2
+  => Variant r2
+respondNothing =
+  Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body: unit })
+
+-- | Construct a 204 No Content response (no headers, no body)
+-- |
+-- | Example:
+-- |   respondNoContent
+respondNoContent
+  :: forall r1 r2
+   . Cons "noContent" (Response () Unit) r1 r2
+  => Variant r2
+respondNoContent =
+  unsafeCoerce (Variant.inj (Proxy :: Proxy "noContent") (Response { headers: {}, body: unit }))
+
+-- | Construct a 304 Not Modified response (no headers, no body)
+-- |
+-- | Example:
+-- |   respondNotModified
+respondNotModified
+  :: forall r1 r2
+   . Cons "notModified" (Response () Unit) r1 r2
+  => Variant r2
+respondNotModified =
+  unsafeCoerce (Variant.inj (Proxy :: Proxy "notModified") (Response { headers: {}, body: unit }))

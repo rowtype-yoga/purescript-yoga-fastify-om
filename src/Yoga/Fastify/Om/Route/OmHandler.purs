@@ -2,6 +2,10 @@ module Yoga.Fastify.Om.Route.OmHandler
   ( handle
   , respond
   , respondWithHeaders
+  , respondNow
+  , respondNowWithHeaders
+  , respondNoContent
+  , respondNotModified
   , reject
   , rejectWithHeaders
   , class Is2xxStatus
@@ -16,6 +20,7 @@ import Prelude
 
 import Control.Monad.Error.Class (throwError)
 import Data.Symbol (class IsSymbol)
+import Data.Unit (Unit, unit)
 import Data.Variant (class VariantMatchCases, Variant)
 import Data.Variant as Variant
 import Effect.Aff as Aff
@@ -27,6 +32,7 @@ import Record as Record
 import Record.Builder (Builder)
 import Record.Builder as Builder
 import Type.Proxy (Proxy(..))
+import Unsafe.Coerce (unsafeCoerce)
 import Yoga.Fastify.Om.Route.Response (Response(..))
 import Yoga.Fastify.Om.Route.RouteHandler (Handler, class RouteHandler, mkHandler)
 import Yoga.Om (Om, handleErrors', runOm)
@@ -179,6 +185,72 @@ respondWithHeaders rec =
   in
     pure (Variant.inj (Proxy :: Proxy label) (Response { headers, body }))
 
+-- | Short-circuit an Om handler with a 2xx response (no headers).
+-- |
+-- | Example:
+-- | ```purescript
+-- | respondNow { noContent: {} }
+-- | ```
+respondNow
+  :: forall rec label body r1 successRow err ctx a
+   . RL.RowToList rec (RL.Cons label body RL.Nil)
+  => Row.Cons label body () rec
+  => IsSymbol label
+  => Row.Cons label (Response () body) r1 successRow
+  => Record rec
+  -> Om ctx (_respondNow :: Variant successRow | err) a
+respondNow rec =
+  let
+    body = Record.get (Proxy :: Proxy label) rec
+  in
+    throwError (Variant.inj (Proxy :: Proxy "_respondNow") (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body })))
+
+-- | Short-circuit an Om handler with a 2xx response with custom headers.
+-- |
+-- | Example:
+-- | ```purescript
+-- | respondNowWithHeaders { ok: { headers: { "X-Cache": "HIT" }, body: cachedUser } }
+-- | ```
+respondNowWithHeaders
+  :: forall rec label headers body r1 successRow err ctx a
+   . RL.RowToList rec (RL.Cons label { headers :: Record headers, body :: body } RL.Nil)
+  => Row.Cons label { headers :: Record headers, body :: body } () rec
+  => IsSymbol label
+  => Row.Cons label (Response headers body) r1 successRow
+  => Record rec
+  -> Om ctx (_respondNow :: Variant successRow | err) a
+respondNowWithHeaders rec =
+  let
+    { headers, body } = Record.get (Proxy :: Proxy label) rec
+  in
+    throwError (Variant.inj (Proxy :: Proxy "_respondNow") (Variant.inj (Proxy :: Proxy label) (Response { headers, body })))
+
+-- | Return a 204 No Content response (no headers, no body).
+-- |
+-- | Example:
+-- | ```purescript
+-- | respondNoContent
+-- | ```
+respondNoContent
+  :: forall r1 r2 ctx err
+   . Row.Cons "noContent" (Response () Unit) r1 r2
+  => Om ctx err (Variant r2)
+respondNoContent =
+  pure (unsafeCoerce (Variant.inj (Proxy :: Proxy "noContent") (Response { headers: {}, body: unit })))
+
+-- | Return a 304 Not Modified response (no headers, no body).
+-- |
+-- | Example:
+-- | ```purescript
+-- | respondNotModified
+-- | ```
+respondNotModified
+  :: forall r1 r2 ctx err
+   . Row.Cons "notModified" (Response () Unit) r1 r2
+  => Om ctx err (Variant r2)
+respondNotModified =
+  pure (unsafeCoerce (Variant.inj (Proxy :: Proxy "notModified") (Response { headers: {}, body: unit })))
+
 -- | Throw a non-2xx response in an Om handler (short-circuits) with no headers.
 -- |
 -- | Example:
@@ -265,19 +337,23 @@ handle
            (Variant respVariant)
        )
   => Row.Union handled (exception :: Error) (exception :: Error | errorRow)
+  -- respondNow support
+  => Row.Lacks "_respondNow" errorRow
   => Om
        { path :: Record pathParams
        , query :: Record queryParams
        , headers :: Record reqHeaders
        , body :: body
        }
-       errorRow
+       (_respondNow :: Variant successRow | errorRow)
        (Variant successRow)
   -> Handler route
 handle om = mkHandler \ctx ->
   runOm ctx { exception: Aff.throwError } $
-    handleErrors' errorHandler (Variant.expand <$> om)
+    handleErrors' errorHandler (Variant.expand <$> om')
   where
+  om' = handleErrors' respondNowHandler om
+  respondNowHandler = Variant.on (Proxy :: Proxy "_respondNow") pure throwError
   errorHandler errVariant =
     Variant.onMatch
       ( Builder.buildFromScratch
