@@ -18,15 +18,15 @@ import Effect (Effect)
 import Effect.Console (log, logShow)
 
 -- Import path types from production module
-import Yoga.HTTP.API.Path (Path, PathCons, Param, QueryParams, Required, type (:>), type (/), type (:?))
+import Yoga.HTTP.API.Path (Path, PathCons, Param, QueryParams, Required, type (/), type (:), type (:?))
 
 -- Let's start with a simple example
--- Given: Path ("users" / "id" :> Int / "posts")
+-- Given: Path ("users" / "id" : Int / "posts")
 -- Parse: "/users/124/posts"
 -- Result: { id :: Int }
 
 -- First, let's try a really simple case: just one capture
-type SimplePath = Path ("users" / "id" :> Int)
+type SimplePath = Path ("users" / "id" : Int)
 
 -- We need a typeclass that can parse a path string and extract the captures
 class ParsePath :: forall k. k -> Type -> Constraint
@@ -34,7 +34,7 @@ class ParsePath path result | path -> result where
   parsePath :: Proxy path -> String -> Maybe result
 
 -- Start with the simplest possible case: a path with one segment and one capture
--- Path ("users" / "id" :> Int)
+-- Path ("users" / "id" : Int)
 -- We need to parse this step by step
 
 -- First, let's define what the result type should look like for different path structures
@@ -120,7 +120,7 @@ test4 = parseCapture "/hello/world"
 -- Should return: Just { value: "hello", remaining: "/world" }
 
 -- Now let's parse a complete path into a record
--- For Path ("users" / "id" :> Int / "posts"), we want to extract { id :: Int }
+-- For Path ("users" / "id" : Int / "posts"), we want to extract { id :: Int }
 
 -- We need a typeclass that builds up a record from path segments
 -- Use instance chains to avoid overlapping
@@ -166,7 +166,7 @@ else instance parsePathSegmentsString :: IsSymbol s => ParsePathSegments s () wh
       Nothing -> Nothing
 
 -- Now test a real path!
-type TestPath = "users" / "id" :> Int / "posts"
+type TestPath = "users" / "id" : Int / "posts"
 
 test5 :: Maybe { captures :: { id :: Int }, remaining :: String }
 test5 = parsePathSegments (Proxy :: Proxy TestPath) "/users/124/posts"
@@ -298,7 +298,7 @@ instance parseFullPathImpl ::
         _ -> Left [ "Invalid path: " <> pathPart ]
 
 -- Test with optional query params
-type TestPathWithQuery = Path ("users" / "id" :> Int / "posts") :? { limit :: Int, offset :: Int }
+type TestPathWithQuery = Path ("users" / "id" : Int / "posts") :? { limit :: Int, offset :: Int }
 
 test7 :: Either (Array String) { path :: { id :: Int }, query :: { limit :: Maybe Int, offset :: Maybe Int } }
 test7 = parseFullPath (Proxy :: Proxy TestPathWithQuery) (Proxy :: Proxy (limit :: Int, offset :: Int)) "/users/124/posts?limit=10&offset=20"
@@ -316,7 +316,7 @@ test9 = parseFullPath (Proxy :: Proxy TestPathWithQuery) (Proxy :: Proxy (limit 
 -- Should return: Right { path: { id: 124 }, query: { limit: Nothing, offset: Nothing } }
 
 -- Test with Required query params
-type TestPathWithRequired = Path ("users" / "id" :> Int / "posts") :? { limit :: Required Int, offset :: Int }
+type TestPathWithRequired = Path ("users" / "id" : Int / "posts") :? { limit :: Required Int, offset :: Int }
 
 test10 :: Either (Array String) { path :: { id :: Int }, query :: { limit :: Int, offset :: Maybe Int } }
 test10 = parseFullPath (Proxy :: Proxy TestPathWithRequired) (Proxy :: Proxy (limit :: Required Int, offset :: Int)) "/users/124/posts?limit=10&offset=20"

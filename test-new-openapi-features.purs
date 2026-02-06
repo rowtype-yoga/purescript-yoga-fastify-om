@@ -7,7 +7,7 @@ import Data.Show.Generic (genericShow)
 import Effect (Effect)
 import Effect.Console (log)
 import Type.Proxy (Proxy(..))
-import Yoga.HTTP.API.Path (Lit, type (/), type (:>))
+import Yoga.HTTP.API.Path (Lit, type (/), )
 import Yoga.Fastify.Om.Route (Route, Request, GET, POST, JSON, route, toOpenAPI, buildOpenAPISpec', Description, Example, Format, Enum, BearerToken)
 import Yoga.JSON (writeJSON)
 
@@ -45,14 +45,14 @@ type OrderStatus =
 -- Route with enum in path parameter
 type GetOrdersByStatusRoute = Route
   GET
-  (Lit "orders" / "status" :> OrderStatus)
+  (Lit "orders" / "status" : OrderStatus)
   (Request {})
   (ok :: { body :: Array { id :: String, status :: OrderStatus } })
 
 -- Route with enum in request body
 type UpdateOrderRoute = Route
   POST
-  (Lit "orders" / "orderId" :> String)
+  (Lit "orders" / "orderId" : String)
   (Request { body :: JSON { status :: OrderStatus } })
   ( ok :: { body :: { id :: String, status :: OrderStatus } }
   , badRequest :: { body :: { error :: String } }
@@ -80,7 +80,7 @@ type CacheControl =
 -- Route with rich response headers
 type GetUserRoute = Route
   GET
-  (Lit "users" / "id" :> String)
+  (Lit "users" / "id" : String)
   (Request { headers :: { authorization :: BearerToken } })
   ( ok ::
       { body :: { id :: String, name :: String, email :: String }

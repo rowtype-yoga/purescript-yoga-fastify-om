@@ -10,24 +10,24 @@ import Type.RowList (class RowToList, RowList, Cons, Nil)
 import Data.String as String
 
 -- Import path types from production module
-import Yoga.HTTP.API.Path (Path, PathCons, Param, QueryParams, type (/), type (:>), type (:?))
+import Yoga.HTTP.API.Path (Path, PathCons, Param, QueryParams, type (/), type (:), type (:?))
 
 -- Test usage
-type TestPath1 = "users" :> Int
+type TestPath1 = "users" : Int
 
-type TestPath3 = Path ("users" / "id" :> Int / "posts")
+type TestPath3 = Path ("users" / "id" : Int / "posts")
 
 -- Or simpler: just use the operator for params
-type TestPath4 = Path ("users" / "id" :> Int / "posts")
+type TestPath4 = Path ("users" / "id" : Int / "posts")
 
 -- Test usage examples with record-based query params
-type TestPath5 = Path ("users" / "id" :> Int) :? { limit :: Int }
+type TestPath5 = Path ("users" / "id" : Int) :? { limit :: Int }
 
 -- Use a multi-segment path for this example
 type TestPath6 = Path ("api" / "posts") :? { page :: Int, sort :: String }
 
 -- More realistic example
-type TestPath7 = Path ("api" / "users" / "id" :> Int / "posts") :? { limit :: Int, offset :: Int, sort :: Boolean }
+type TestPath7 = Path ("api" / "users" / "id" : Int / "posts") :? { limit :: Int, offset :: Int, sort :: Boolean }
 
 -- Rendering paths to OpenAPI format
 -- We need type classes to convert type-level structures to runtime strings

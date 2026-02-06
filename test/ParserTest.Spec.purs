@@ -8,7 +8,7 @@ import Effect (Effect)
 import Effect.Aff (Aff)
 import Test.ParserTest as Parser
 import Type.Proxy (Proxy(..))
-import Yoga.HTTP.API.Path (Path, Required, type (:>), type (/), type (:?))
+import Yoga.HTTP.API.Path (Path, Required, type (/), type (:), type (:?))
 import ViTest (ViTest, describe, test)
 import ViTest.Expect (expectToBe)
 
@@ -17,10 +17,10 @@ expectToEqual :: forall a. Eq a => a -> a -> Aff Unit
 expectToEqual expected actual = expectToBe true (expected == actual)
 
 -- Type aliases for tests
-type TestPathSimple = "users" / "id" :> Int / "posts"
-type TestPathWithQuery = Path ("users" / "id" :> Int / "posts") :? { limit :: Int, offset :: Int }
-type TestPathWithRequired = Path ("users" / "id" :> Int / "posts") :? { limit :: Required Int, offset :: Int }
-type TestPathError = Path ("users" / "id" :> Int / "posts") :? { limit :: Int }
+type TestPathSimple = "users" / "id" : Int / "posts"
+type TestPathWithQuery = Path ("users" / "id" : Int / "posts") :? { limit :: Int, offset :: Int }
+type TestPathWithRequired = Path ("users" / "id" : Int / "posts") :? { limit :: Required Int, offset :: Int }
+type TestPathError = Path ("users" / "id" : Int / "posts") :? { limit :: Int }
 
 -- Test segment parsing
 testSegmentParsing :: Effect ViTest

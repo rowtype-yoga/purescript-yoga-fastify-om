@@ -6,7 +6,7 @@ import Effect (Effect)
 import Effect.Aff (Aff)
 import Test.OperatorTest as Op
 import Type.Proxy (Proxy(..))
-import Yoga.HTTP.API.Path (Path, type (:>), type (/), type (:?))
+import Yoga.HTTP.API.Path (Path, type (/), type (:), type (:?))
 import ViTest (ViTest, describe, test)
 import ViTest.Expect (expectToBe)
 
@@ -18,7 +18,7 @@ expectToEqual expected actual = expectToBe true (expected == actual)
 testRendering :: Effect ViTest
 testRendering = describe "Path Rendering" $ do
   _ <- test "renders simple path with capture" do
-    let result = Op.renderSimplePath (Proxy :: Proxy (Path ("users" / "id" :> Int / "posts")))
+    let result = Op.renderSimplePath (Proxy :: Proxy (Path ("users" / "id" : Int / "posts")))
     result # expectToEqual "/users/{id}/posts"
 
   _ <- test "renders path with query params" do
@@ -26,5 +26,5 @@ testRendering = describe "Path Rendering" $ do
     expectToEqual "/api/posts?page={page}&sort={sort}" result
 
   test "renders complex path with captures and query params" do
-    let result = Op.renderFullPath (Proxy :: Proxy (Path ("api" / "users" / "id" :> Int / "posts") :? { limit :: Int, offset :: Int }))
+    let result = Op.renderFullPath (Proxy :: Proxy (Path ("api" / "users" / "id" : Int / "posts") :? { limit :: Int, offset :: Int }))
     expectToEqual "/api/users/{id}/posts?limit={limit}&offset={offset}" result
