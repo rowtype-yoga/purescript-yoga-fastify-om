@@ -39,7 +39,10 @@ module Yoga.Fastify.Om.Route.OpenAPI
   , collectOperations
   , OperationEntry
   , buildOpenAPISpec
+  , buildOpenAPISpec'
+  , ServerObject
   , OpenAPISpec
+  , ResponseHeaderObject
   ) where
 
 import Prelude
@@ -51,6 +54,7 @@ import Data.String.Regex.Flags (global)
 import Data.String.Regex.Unsafe (unsafeRegex)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Tuple (Tuple(..))
+import Data.Tuple.Nested (type (/\), (/\))
 import Foreign (Foreign)
 import Foreign.Object as FObject
 import Prim.Row as Row
@@ -59,9 +63,9 @@ import Prim.RowList as RL
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Yoga.Fastify.Om.Route.BearerToken (BearerToken)
-import Yoga.Fastify.Om.Route.Encoding (JSON, NoBody)
+import Yoga.Fastify.Om.Route.Encoding (JSON, FormData, NoBody)
 import Yoga.Fastify.Om.Route.HeaderValue (class HeaderValueType, headerValueType)
-import Yoga.Fastify.Om.Route.OpenAPIMetadata (Description, Example, Format, Minimum, Maximum, Pattern, MinLength, MaxLength, Title, Nullable, Default, Deprecated, class HasDescription, description, class HasExample, example, class HasFormat, format, class HasDeprecated, deprecated, class HasMinimum, minimum, class HasMaximum, maximum, class HasPattern, pattern, class HasMinLength, minLength, class HasMaxLength, maxLength, class HasTitle, title, class HasNullable, nullable, class HasDefault, default, class HasOperationMetadata, operationMetadata)
+import Yoga.Fastify.Om.Route.OpenAPIMetadata (Description, Example, Format, Minimum, Maximum, Pattern, MinLength, MaxLength, Title, Nullable, Default, Deprecated, Enum, class HasDescription, description, class HasExample, example, class HasFormat, format, class HasDeprecated, deprecated, class HasMinimum, minimum, class HasMaximum, maximum, class HasPattern, pattern, class HasMinLength, minLength, class HasMaxLength, maxLength, class HasTitle, title, class HasNullable, nullable, class HasDefault, default, class HasEnum, enum, class HasOperationMetadata, operationMetadata)
 import Yoga.Fastify.Om.Route.Response (class ToResponse)
 import Yoga.Fastify.Om.Route.StatusCode (class StatusCodeMap, statusCodeFor, statusCodeToString)
 import Yoga.JSON (class WriteForeign, writeImpl)
@@ -83,6 +87,7 @@ buildSchema
      , title :: Maybe String
      , nullable :: Boolean
      , default :: Maybe String
+     , enum :: Maybe (Array String)
      }
   -> Foreign
 buildSchema s =
@@ -105,6 +110,7 @@ buildSchema s =
       # insMaybe "title" s.title
       # (if s.nullable then ins "nullable" true else identity)
       # insMaybe "default" s.default
+      # insMaybe "enum" s.enum
 
 -- | Build a parameter object with all metadata
 buildParameter
@@ -163,6 +169,7 @@ instance
   , HasNullable ty
   , HasDefault ty
   , HasDeprecated ty
+  , HasEnum ty
   , RenderHeadersSchemaRL tail tailRow
   , Row.Cons name ty tailRow headers
   , Row.Lacks name tailRow
@@ -183,6 +190,7 @@ instance
         , title: title p
         , nullable: nullable p
         , default: default p
+        , enum: enum p
         }
       param = buildParameter
         { name: reflectSymbol (Proxy :: Proxy name)
@@ -286,6 +294,7 @@ instance
   , HasNullable ty
   , HasDefault ty
   , HasDeprecated ty
+  , HasEnum ty
   , RenderPathParamsSchemaRL tail tailRow
   , Row.Cons name ty tailRow params
   , Row.Lacks name tailRow
@@ -306,6 +315,7 @@ instance
         , title: title p
         , nullable: nullable p
         , default: default p
+        , enum: enum p
         }
       param = buildParameter
         { name: reflectSymbol (Proxy :: Proxy name)
@@ -353,6 +363,7 @@ instance
   , HasNullable ty
   , HasDefault ty
   , HasDeprecated ty
+  , HasEnum ty
   , RenderQueryParamsSchemaRL tail tailRow
   , Row.Cons name ty tailRow params
   , Row.Lacks name tailRow
@@ -373,6 +384,7 @@ instance
         , title: title p
         , nullable: nullable p
         , default: default p
+        , enum: enum p
         }
       param = buildParameter
         { name: reflectSymbol (Proxy :: Proxy name)
@@ -408,6 +420,7 @@ instance RenderJSONSchema String where
     , title: Nothing
     , nullable: false
     , default: Nothing
+    , enum: Nothing
     }
 
 instance RenderJSONSchema Int where
@@ -423,6 +436,7 @@ instance RenderJSONSchema Int where
     , title: Nothing
     , nullable: false
     , default: Nothing
+    , enum: Nothing
     }
 
 instance RenderJSONSchema Number where
@@ -438,6 +452,7 @@ instance RenderJSONSchema Number where
     , title: Nothing
     , nullable: false
     , default: Nothing
+    , enum: Nothing
     }
 
 instance RenderJSONSchema Boolean where
@@ -453,6 +468,7 @@ instance RenderJSONSchema Boolean where
     , title: Nothing
     , nullable: false
     , default: Nothing
+    , enum: Nothing
     }
 
 instance renderJSONSchemaUnit :: RenderJSONSchema Unit where
@@ -468,6 +484,7 @@ instance renderJSONSchemaUnit :: RenderJSONSchema Unit where
     , title: Nothing
     , nullable: false
     , default: Nothing
+    , enum: Nothing
     }
 
 -- Array type
@@ -509,6 +526,10 @@ instance renderJSONSchemaRecord :: (RowToList row rl, RenderRecordSchemaRL rl ro
 
 -- JSON encoding wrapper (unwrap and render inner type)
 instance RenderJSONSchema a => RenderJSONSchema (JSON a) where
+  renderJSONSchema _ = renderJSONSchema (Proxy :: Proxy a)
+
+-- FormData encoding wrapper (unwrap and render inner type)
+instance RenderJSONSchema a => RenderJSONSchema (FormData a) where
   renderJSONSchema _ = renderJSONSchema (Proxy :: Proxy a)
 
 -- NoBody encoding (no schema)
@@ -570,6 +591,18 @@ instance RenderJSONSchema a => RenderJSONSchema (Deprecated a) where
     in
       unsafeCoerce withDeprecated
 
+instance (RenderJSONSchema a, HasEnum (Enum a)) => RenderJSONSchema (Enum a) where
+  renderJSONSchema _ =
+    let
+      innerSchema = renderJSONSchema (Proxy :: Proxy a)
+      innerObj = unsafeCoerce innerSchema :: FObject.Object Foreign
+      enumValues = enum (Proxy :: Proxy (Enum a))
+      withEnum = case enumValues of
+        Nothing -> innerObj
+        Just vals -> FObject.insert "enum" (unsafeCoerce vals) innerObj
+    in
+      unsafeCoerce withEnum
+
 -- Other metadata wrappers (Minimum, Maximum, Pattern, MinLength, MaxLength, Title, Default)
 -- are similar but require more complex constraints, so we'll skip them for now in body schemas
 
@@ -610,9 +643,9 @@ instance
 --------------------------------------------------------------------------------
 
 -- | Render request body schema for OpenAPI requestBody section
--- | Returns Nothing for NoBody, Just requestBody object for JSON
+-- | Returns Nothing for NoBody, Just requestBody object for JSON/FormData
 class RenderRequestBodySchema (encoding :: Type) where
-  renderRequestBodySchema :: Proxy encoding -> Maybe { required :: Boolean, content :: { "application/json" :: { schema :: Foreign } } }
+  renderRequestBodySchema :: Proxy encoding -> Maybe { required :: Boolean, content :: Foreign }
 
 -- NoBody: no request body
 instance RenderRequestBodySchema NoBody where
@@ -622,8 +655,18 @@ instance RenderRequestBodySchema NoBody where
 instance RenderJSONSchema a => RenderRequestBodySchema (JSON a) where
   renderRequestBodySchema _ = Just
     { required: true
-    , content:
+    , content: unsafeCoerce
         { "application/json":
+            { schema: renderJSONSchema (Proxy :: Proxy a) }
+        }
+    }
+
+-- FormData: request body with application/x-www-form-urlencoded content type
+instance RenderJSONSchema a => RenderRequestBodySchema (FormData a) where
+  renderRequestBodySchema _ = Just
+    { required: true
+    , content: unsafeCoerce
+        { "application/x-www-form-urlencoded":
             { schema: renderJSONSchema (Proxy :: Proxy a) }
         }
     }
@@ -632,16 +675,52 @@ instance RenderJSONSchema a => RenderRequestBodySchema (JSON a) where
 -- Response Headers Schema Generation
 --------------------------------------------------------------------------------
 
+-- | Response header object type with all metadata
+type ResponseHeaderObject =
+  { schema :: Foreign
+  , description :: Maybe String
+  , example :: Maybe String
+  , deprecated :: Maybe Boolean
+  }
+
+-- | Build a response header object with metadata
+buildResponseHeader
+  :: { type :: String
+     , description :: Maybe String
+     , example :: Maybe String
+     , deprecated :: Maybe Boolean
+     , format :: Maybe String
+     , enum :: Maybe (Array String)
+     }
+  -> ResponseHeaderObject
+buildResponseHeader { type: typeStr, description: desc, example: ex, deprecated: dep, format: fmt, enum: enumVals } =
+  let
+    ins :: forall a. String -> a -> FObject.Object Foreign -> FObject.Object Foreign
+    ins key val obj = FObject.insert key (unsafeCoerce val) obj
+
+    insMaybe :: forall a. String -> Maybe a -> FObject.Object Foreign -> FObject.Object Foreign
+    insMaybe key valMaybe obj = maybe obj (\v -> ins key v obj) valMaybe
+
+    schema = unsafeCoerce $ FObject.fromFoldable [ Tuple "type" (unsafeCoerce typeStr) ]
+      # insMaybe "format" fmt
+      # insMaybe "enum" enumVals
+  in
+    { schema
+    , description: desc
+    , example: ex
+    , deprecated: if dep == Just true then Just true else Nothing
+    }
+
 -- | Render response headers row as OpenAPI header object (for responses section)
 class RenderResponseHeadersSchema (headers :: Row Type) where
-  renderResponseHeadersSchema :: Proxy headers -> FObject.Object { schema :: { type :: String } }
+  renderResponseHeadersSchema :: Proxy headers -> FObject.Object ResponseHeaderObject
 
 instance (RowToList headers rl, RenderResponseHeadersSchemaRL rl headers) => RenderResponseHeadersSchema headers where
   renderResponseHeadersSchema _ = renderResponseHeadersSchemaRL (Proxy :: Proxy rl)
 
 -- | Helper class using RowList
 class RenderResponseHeadersSchemaRL (rl :: RowList Type) (headers :: Row Type) | rl -> headers where
-  renderResponseHeadersSchemaRL :: Proxy rl -> FObject.Object { schema :: { type :: String } }
+  renderResponseHeadersSchemaRL :: Proxy rl -> FObject.Object ResponseHeaderObject
 
 instance RenderResponseHeadersSchemaRL RL.Nil () where
   renderResponseHeadersSchemaRL _ = FObject.empty
@@ -650,6 +729,11 @@ instance RenderResponseHeadersSchemaRL RL.Nil () where
 instance
   ( IsSymbol name
   , HeaderValueType ty
+  , HasDescription ty
+  , HasExample ty
+  , HasDeprecated ty
+  , HasFormat ty
+  , HasEnum ty
   , RenderResponseHeadersSchemaRL tail tailRow
   , Row.Cons name ty tailRow headers
   , Row.Lacks name tailRow
@@ -657,9 +741,16 @@ instance
   RenderResponseHeadersSchemaRL (RL.Cons name ty tail) headers where
   renderResponseHeadersSchemaRL _ =
     let
+      p = Proxy :: Proxy ty
       headerName = reflectSymbol (Proxy :: Proxy name)
-      headerType = headerValueType (Proxy :: Proxy ty)
-      header = { schema: { type: headerType } }
+      header = buildResponseHeader
+        { type: headerValueType p
+        , description: description p
+        , example: example p
+        , deprecated: if deprecated p then Just true else Nothing
+        , format: format p
+        , enum: enum p
+        }
       rest = renderResponseHeadersSchemaRL (Proxy :: Proxy tail)
     in
       FObject.insert headerName header rest
@@ -675,7 +766,7 @@ class RenderResponseSchema (headers :: Row Type) (body :: Type) where
     -> Proxy body
     -> { "200" ::
            { description :: String
-           , headers :: FObject.Object { schema :: { type :: String } }
+           , headers :: FObject.Object ResponseHeaderObject
            , content ::
                { "application/json" ::
                    { schema :: Foreign }
@@ -706,7 +797,7 @@ instance (RenderResponseHeadersSchema headers, RenderJSONSchema body) => RenderR
 -- | Type alias for OpenAPI response object
 type ResponseObject =
   { description :: String
-  , headers :: FObject.Object { schema :: { type :: String } }
+  , headers :: FObject.Object ResponseHeaderObject
   , content :: { "application/json" :: { schema :: Foreign } }
   }
 
@@ -830,17 +921,43 @@ buildSecuritySchemes ops =
     else
       FObject.empty
 
+-- | Type for OpenAPI server object
+type ServerObject =
+  { url :: String
+  , description :: Maybe String
+  }
+
 -- | Build a complete OpenAPI 3.0 spec from a type-level collection of routes.
 -- |
--- | Example:
--- |   buildOpenAPISpec @(HealthRoute /\ UserRoute /\ CreateUserRoute)
+-- | Examples:
+-- |   -- Basic usage:
+-- |   buildOpenAPISpec @(HealthRoute /\ UserRoute)
 -- |     { title: "My API", version: "1.0.0" }
+-- |
+-- |   -- With servers:
+-- |   buildOpenAPISpec' @(HealthRoute /\ UserRoute)
+-- |     { title: "My API"
+-- |     , version: "1.0.0"
+-- |     , servers: Just
+-- |         [ { url: "https://api.example.com", description: Just "Production server" }
+-- |         , { url: "https://staging-api.example.com", description: Just "Staging server" }
+-- |         ]
+-- |     }
 buildOpenAPISpec
   :: forall @routes
    . CollectOperations routes
   => { title :: String, version :: String }
   -> OpenAPISpec
-buildOpenAPISpec info =
+buildOpenAPISpec info = buildOpenAPISpec' @routes info { servers: Nothing }
+
+-- | Build a complete OpenAPI 3.0 spec with optional servers configuration.
+buildOpenAPISpec'
+  :: forall @routes
+   . CollectOperations routes
+  => { title :: String, version :: String }
+  -> { servers :: Maybe (Array ServerObject) }
+  -> OpenAPISpec
+buildOpenAPISpec' info config =
   let
     ops = collectOperations (Proxy :: Proxy routes)
     paths = groupByPath ops
@@ -856,8 +973,11 @@ buildOpenAPISpec info =
     withComponents = case components of
       Nothing -> baseSpec
       Just c -> FObject.insert "components" (unsafeCoerce c) baseSpec
+    withServers = case config.servers of
+      Nothing -> withComponents
+      Just servers -> FObject.insert "servers" (writeImpl servers) withComponents
   in
-    unsafeCoerce $ withComponents
+    unsafeCoerce $ withServers
 
 -- | Convert `:param` to `{param}` for OpenAPI path format
 toOpenAPIPath :: String -> String

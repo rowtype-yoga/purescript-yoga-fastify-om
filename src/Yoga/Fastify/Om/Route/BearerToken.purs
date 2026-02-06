@@ -1,14 +1,12 @@
 module Yoga.Fastify.Om.Route.BearerToken
   ( BearerToken(..)
-  , unBearerToken
   ) where
 
 import Prelude
 
 import Data.Either (Either(..))
-import Data.Newtype (class Newtype, unwrap)
+import Data.Newtype (class Newtype)
 import Data.String as String
-import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Om.Route.HeaderValue (class HeaderValue, class HeaderValueType)
 
 --------------------------------------------------------------------------------
@@ -27,10 +25,6 @@ newtype BearerToken = BearerToken String
 derive instance Eq BearerToken
 derive newtype instance Show BearerToken
 derive instance Newtype BearerToken _
-
--- | Extract the token value
-unBearerToken :: BearerToken -> String
-unBearerToken = unwrap
 
 instance HeaderValue BearerToken where
   parseHeader s =

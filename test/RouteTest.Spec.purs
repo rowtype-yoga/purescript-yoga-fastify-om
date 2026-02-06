@@ -6,19 +6,22 @@ import Data.Array as Array
 import Data.Array.NonEmpty as NEA
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
+import Data.Newtype (un)
 import Data.String as String
 import Data.Tuple.Nested ((/\))
 import Data.Variant (Variant)
 import Effect (Effect)
 import Effect.Aff (Aff)
+import Foreign (Foreign)
 import Foreign.Object as FObject
 import Type.Proxy (Proxy(..))
-import Yoga.Fastify.Om.Path (Root, Lit, Capture, type (/), type (:?), Required)
-import Yoga.Fastify.Om.Route (HeaderError(..), BearerToken(..), unBearerToken, class HeaderValue, parseHeader, printHeader, parseHeaders, Route, Request, Response, GET, POST, PUT, toOpenAPI, renderMethod, renderHeadersSchema, renderResponseHeadersSchema, renderResponseSchema, renderPathParamsSchema, renderQueryParamsSchema, renderRequestBodySchema, JSON, NoBody)
-import Yoga.JSON (writeJSON)
+import Unsafe.Coerce (unsafeCoerce)
 import ViTest (ViTest, describe, test)
 import ViTest.Expect (expectToBe)
 import ViTest.Expect.Either (expectRight, expectIsLeft, expectLeftContains)
+import Yoga.Fastify.Om.Path (Root, Lit, Capture, type (/), type (:?), Required)
+import Yoga.Fastify.Om.Route (HeaderError(..), BearerToken(..), class HeaderValue, parseHeader, printHeader, parseHeaders, Route, Request, Response, GET, POST, PUT, toOpenAPI, renderMethod, renderHeadersSchema, renderResponseHeadersSchema, renderResponseSchema, renderPathParamsSchema, renderQueryParamsSchema, renderRequestBodySchema, JSON, FormData, NoBody)
+import Yoga.JSON (writeJSON)
 
 -- Custom equality assertion that compares in PureScript then asserts true
 expectToEqual :: forall a. Eq a => a -> a -> Aff Unit
@@ -114,7 +117,7 @@ testBearerToken = describe "BearerToken" $ do
   _ <- test "parses valid Bearer token" do
     let result = parseHeader "Bearer abc123xyz" :: Either String BearerToken
     case result of
-      Right token -> expectToEqual "abc123xyz" (unBearerToken token)
+      Right token -> expectToEqual "abc123xyz" (un BearerToken token)
       Left _ -> expectToBe false true
 
   _ <- test "rejects token without Bearer prefix" do
@@ -128,7 +131,7 @@ testBearerToken = describe "BearerToken" $ do
   _ <- test "handles Bearer with empty token" do
     let result = parseHeader "Bearer " :: Either String BearerToken
     case result of
-      Right token -> expectToEqual "" (unBearerToken token)
+      Right (BearerToken token) -> expectToEqual "" token
       Left _ -> expectToBe false true
 
   test "round-trips correctly" do
@@ -212,20 +215,28 @@ testRenderResponseHeadersSchema :: Effect ViTest
 testRenderResponseHeadersSchema = describe "RenderResponseHeadersSchema" $ do
   _ <- test "renders empty response headers" do
     let result = renderResponseHeadersSchema (Proxy :: Proxy ())
-    expectToEqual FObject.empty result
+    expectToBe true (FObject.isEmpty result)
 
   _ <- test "renders single String response header" do
     let result = renderResponseHeadersSchema (Proxy :: Proxy ("Location" :: String))
     let location = FObject.lookup "Location" result
     case location of
-      Just header -> expectToEqual "string" header.schema.type
+      Just header -> do
+        let schemaObj = unsafeCoerce header.schema :: FObject.Object Foreign
+        case FObject.lookup "type" schemaObj of
+          Just typeVal -> expectToEqual "string" (unsafeCoerce typeVal :: String)
+          Nothing -> expectToBe false true
       Nothing -> expectToBe false true
 
   test "renders Int response header" do
     let result = renderResponseHeadersSchema (Proxy :: Proxy ("X-Version" :: Int))
     let version = FObject.lookup "X-Version" result
     case version of
-      Just header -> expectToEqual "integer" header.schema.type
+      Just header -> do
+        let schemaObj = unsafeCoerce header.schema :: FObject.Object Foreign
+        case FObject.lookup "type" schemaObj of
+          Just typeVal -> expectToEqual "integer" (unsafeCoerce typeVal :: String)
+          Nothing -> expectToBe false true
       Nothing -> expectToBe false true
 
 testRenderResponseSchema :: Effect ViTest
@@ -233,7 +244,7 @@ testRenderResponseSchema = describe "RenderResponseSchema" $ do
   _ <- test "renders response with no headers and introspected body schema" do
     let result = renderResponseSchema (Proxy :: Proxy ()) (Proxy :: Proxy String)
     expectToEqual "Successful response" result."200".description
-    expectToEqual FObject.empty result."200".headers
+    expectToBe true (FObject.isEmpty result."200".headers)
     -- Schema is now a full Foreign object with introspection, verify it contains "type"
     let schemaStr = writeJSON result."200".content."application/json".schema
     expectToBe true (String.contains (String.Pattern "\"type\"") schemaStr)
@@ -283,17 +294,28 @@ testRenderRequestBodySchema = describe "RenderRequestBodySchema" $ do
       Nothing -> expectToBe true true
       Just _ -> expectToBe false true
 
-  test "renders JSON body with schema introspection" do
+  _ <- test "renders JSON body with schema introspection" do
     let result = renderRequestBodySchema (Proxy :: Proxy (JSON User))
     case result of
       Nothing -> expectToBe false true
       Just body -> do
         expectToEqual true body.required
-        -- Schema is now a full Foreign object with properties, not just { type: "object" }
-        -- We can verify it contains the expected structure by converting to string
-        let schemaStr = writeJSON body.content."application/json".schema
-        expectToBe true (String.contains (String.Pattern "\"type\"") schemaStr)
-        expectToBe true (String.contains (String.Pattern "\"properties\"") schemaStr)
+        -- Content is now Foreign, so we convert it to string to verify structure
+        let contentStr = writeJSON body.content
+        expectToBe true (String.contains (String.Pattern "application/json") contentStr)
+        expectToBe true (String.contains (String.Pattern "\"type\"") contentStr)
+        expectToBe true (String.contains (String.Pattern "\"properties\"") contentStr)
+
+  test "renders FormData body with application/x-www-form-urlencoded" do
+    let result = renderRequestBodySchema (Proxy :: Proxy (FormData User))
+    case result of
+      Nothing -> expectToBe false true
+      Just body -> do
+        expectToEqual true body.required
+        let contentStr = writeJSON body.content
+        expectToBe true (String.contains (String.Pattern "application/x-www-form-urlencoded") contentStr)
+        expectToBe true (String.contains (String.Pattern "\"type\"") contentStr)
+        expectToBe true (String.contains (String.Pattern "\"properties\"") contentStr)
 
 -- Route with path parameters
 type TestRoute7 = Route GET (Lit "users" / Capture "id" String)

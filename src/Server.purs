@@ -5,7 +5,7 @@ import Prelude
 import Control.Monad.Reader.Trans (ask)
 import Data.Either (Either(..))
 import Data.Int as Int
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Effect (Effect)
 import Effect.Aff as Aff
@@ -13,15 +13,60 @@ import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
+import Data.Generic.Rep (class Generic)
+import Data.Show.Generic (genericShow)
+import Data.Tuple.Nested (type (/\), (/\))
+import Foreign (Foreign)
+import Foreign.Object as FObject
+import Type.Proxy (Proxy(..))
+import Unsafe.Coerce (unsafeCoerce)
 import Yoga.Fastify.Om.Path (class ParseParam, parseParam, type (/), type (:), type (:>), type (:?))
-import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, mkHandler, JSON, handleRoute, respondNoHeaders, handle, respond, reject)
+import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, mkHandler, JSON, handleRoute, respondNoHeaders, handle, respond, reject, buildOpenAPISpec', class HeaderValueType, BearerToken, Description, Example, Enum, class RenderJSONSchema, renderJSONSchema, class HasEnum, enum)
+import Yoga.JSON (writeJSON, class WriteForeign, class ReadForeign)
+import Yoga.JSON.Generics (genericWriteForeignEnum, genericReadForeignEnum)
 
 --------------------------------------------------------------------------------
 -- Example Types
 --------------------------------------------------------------------------------
 
-type User = { id :: Int, name :: String, email :: String }
-type CreateUserRequest = { name :: String, email :: String }
+-- User role enum
+data UserRole = Admin | Member | Guest
+
+derive instance Generic UserRole _
+instance Show UserRole where
+  show = genericShow
+
+instance WriteForeign UserRole where
+  writeImpl = genericWriteForeignEnum { toConstructorName: identity }
+
+instance ReadForeign UserRole where
+  readImpl = genericReadForeignEnum { toConstructorName: identity }
+
+instance RenderJSONSchema UserRole where
+  renderJSONSchema _ =
+    let
+      enumValues = enum (Proxy :: Proxy (Enum UserRole))
+      baseSchema = FObject.fromFoldable
+        [ unsafeCoerce $ { key: "type", value: unsafeCoerce "string" }
+        ]
+    in
+      case enumValues of
+        Nothing -> unsafeCoerce baseSchema
+        Just vals -> unsafeCoerce $ FObject.insert "enum" (unsafeCoerce vals) baseSchema
+
+type User =
+  { id :: Int
+  , name :: String
+  , email :: String
+  , role :: UserRole
+  }
+
+type CreateUserRequest =
+  { name :: String
+  , email :: String
+  , role :: UserRole
+  }
+
 type ErrorResponse = { error :: String }
 
 --------------------------------------------------------------------------------
@@ -49,19 +94,23 @@ instance ParseParam UserId where
     if n > 0 then Right (UserId n)
     else Left "UserId must be positive"
 
--- GET /users/:id
+instance HeaderValueType UserId where
+  headerValueType _ = "integer"
+
+-- GET /users/:id (with authentication)
 type UserRoute = Route GET
   ("users" / "id" : UserId)
-  (Request {})
+  (Request { headers :: { authorization :: BearerToken } })
   ( ok :: { body :: User }
   , notFound :: { body :: ErrorResponse }
+  , unauthorized :: { body :: ErrorResponse }
   )
 
 userHandler :: Handler UserRoute
 userHandler = mkHandler \{ path } ->
   if path.id == UserId 1 then
     pure $ respondNoHeaders @"ok"
-      { id: 1, name: "Alice", email: "alice@example.com" }
+      { id: 1, name: "Alice", email: "alice@example.com", role: Admin }
   else
     pure $ respondNoHeaders @"notFound"
       { error: "User not found" }
@@ -72,7 +121,7 @@ userHandlerOm = handle do
   { path } <- ask
   when (path.id /= UserId 1) do
     reject { notFound: { error: "User not found" } }
-  respond { ok: { id: 1, name: "Alice", email: "alice@example.com" } }
+  respond { ok: { id: 1, name: "Alice", email: "alice@example.com", role: Admin } }
 
 -- GET /users?limit=10
 type UsersWithLimitRoute = Route GET
@@ -84,18 +133,23 @@ type UsersWithLimitRoute = Route GET
 usersWithLimitHandler :: Handler UsersWithLimitRoute
 usersWithLimitHandler = mkHandler \{ query } -> pure $ respondNoHeaders @"ok"
   { users:
-      [ { id: 1, name: "Alice", email: "alice@example.com" }
-      , { id: 2, name: "Bob", email: "bob@example.com" }
+      [ { id: 1, name: "Alice", email: "alice@example.com", role: Admin }
+      , { id: 2, name: "Bob", email: "bob@example.com", role: Member }
       ]
   , limit: query.limit
   }
 
--- POST /users
+-- POST /users (with authentication)
 type CreateUserRoute = Route POST
   "users"
-  (Request { body :: JSON CreateUserRequest })
+  ( Request
+      { headers :: { authorization :: BearerToken }
+      , body :: JSON CreateUserRequest
+      }
+  )
   ( created :: { body :: User }
   , badRequest :: { body :: ErrorResponse }
+  , unauthorized :: { body :: ErrorResponse }
   )
 
 createUserHandler :: Handler CreateUserRoute
@@ -105,7 +159,39 @@ createUserHandler = mkHandler \{ body } ->
       { error: "Name cannot be empty" }
   else
     pure $ respondNoHeaders @"created"
-      { id: 999, name: body.name, email: body.email }
+      { id: 999, name: body.name, email: body.email, role: body.role }
+
+-- GET /openapi - Serve OpenAPI spec
+type OpenAPIRoute = Route GET
+  "openapi"
+  (Request {})
+  ( ok :: { body :: String }
+  )
+
+-- Define all API routes for OpenAPI generation
+type AllApiRoutes =
+  HealthRoute
+    /\ UserRoute
+    /\ UsersWithLimitRoute
+    /\
+      CreateUserRoute
+
+openapiHandler :: Handler OpenAPIRoute
+openapiHandler = mkHandler \_ ->
+  pure $ respondNoHeaders @"ok" $ writeJSON $
+    buildOpenAPISpec' @AllApiRoutes
+      { title: "Example API"
+      , version: "1.0.0"
+      }
+      { servers: Just
+          [ { url: "http://localhost:3000"
+            , description: Just "Local development server"
+            }
+          , { url: "https://api.example.com"
+            , description: Just "Production server"
+            }
+          ]
+      }
 
 --------------------------------------------------------------------------------
 -- Server Setup
@@ -115,12 +201,15 @@ createServer :: Effect Fastify
 createServer = do
   fastify <- F.fastify {}
 
-  -- Register routes
+  -- Register API routes
   handleRoute healthHandler fastify
   -- handleRoute userHandler fastify
   handleRoute usersWithLimitHandler fastify
   handleRoute userHandlerOm fastify
   handleRoute createUserHandler fastify
+
+  -- Register OpenAPI spec endpoint
+  handleRoute openapiHandler fastify
 
   pure fastify
 
