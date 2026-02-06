@@ -73,8 +73,7 @@ type ErrorResponse = { error :: String }
 --------------------------------------------------------------------------------
 
 -- GET /health
-type HealthRoute = Route GET
-  "health"
+type HealthRoute = Route GET "health"
   (Request {})
   ( ok :: { body :: { status :: String } }
   , notFound :: { body :: ErrorResponse }
