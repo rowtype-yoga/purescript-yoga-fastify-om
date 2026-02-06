@@ -26,6 +26,7 @@
               "variant": ">=8.0.0 <9.0.0"
             },
             "yoga-fastify",
+            "yoga-http-api",
             {
               "yoga-json": ">=5.0.0 <6.0.0"
             },
@@ -578,6 +579,9 @@
       },
       "yoga-fastify": {
         "path": "../purescript-yoga-fastify"
+      },
+      "yoga-http-api": {
+        "path": "../purescript-yoga-http-api"
       },
       "yoga-om": {
         "path": "../purescript-yoga-om"
@@ -1642,7 +1646,9 @@
       "path": "../purescript-yoga-fastify",
       "dependencies": [
         "aff",
+        "arrays",
         "effect",
+        "either",
         "foreign",
         "foreign-object",
         "js-promise",
@@ -1650,7 +1656,37 @@
         "maybe",
         "newtype",
         "nullable",
-        "prelude"
+        "prelude",
+        "record",
+        "strings",
+        "unsafe-coerce",
+        "variant",
+        "yoga-http-api",
+        "yoga-json"
+      ]
+    },
+    "yoga-http-api": {
+      "type": "local",
+      "path": "../purescript-yoga-http-api",
+      "dependencies": [
+        "aff",
+        "arrays",
+        "effect",
+        "either",
+        "foldable-traversable",
+        "foreign",
+        "foreign-object",
+        "integers",
+        "maybe",
+        "newtype",
+        "prelude",
+        "record",
+        "strings",
+        "tuples",
+        "typelevel-prelude",
+        "unsafe-coerce",
+        "variant",
+        "yoga-json"
       ]
     },
     "yoga-json": {

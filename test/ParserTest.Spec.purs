@@ -8,7 +8,7 @@ import Effect (Effect)
 import Effect.Aff (Aff)
 import Test.ParserTest as Parser
 import Type.Proxy (Proxy(..))
-import Yoga.Fastify.Om.Path (Path, Required, type (:>), type (/), type (:?))
+import Yoga.HTTP.API.Path (Path, Required, type (:>), type (/), type (:?))
 import ViTest (ViTest, describe, test)
 import ViTest.Expect (expectToBe)
 

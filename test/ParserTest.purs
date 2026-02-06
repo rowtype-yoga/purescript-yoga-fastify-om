@@ -18,7 +18,7 @@ import Effect (Effect)
 import Effect.Console (log, logShow)
 
 -- Import path types from production module
-import Yoga.Fastify.Om.Path (Path, PathCons, Param, QueryParams, Required, type (:>), type (/), type (:?))
+import Yoga.HTTP.API.Path (Path, PathCons, Param, QueryParams, Required, type (:>), type (/), type (:?))
 
 -- Let's start with a simple example
 -- Given: Path ("users" / "id" :> Int / "posts")

@@ -7,7 +7,7 @@ import Data.Show.Generic (genericShow)
 import Effect (Effect)
 import Effect.Console (log)
 import Type.Proxy (Proxy(..))
-import Yoga.Fastify.Om.Path (Lit, type (/), type (:>))
+import Yoga.HTTP.API.Path (Lit, type (/), type (:>))
 import Yoga.Fastify.Om.Route (Route, Request, GET, POST, JSON, route, toOpenAPI, buildOpenAPISpec', Description, Example, Format, Enum, BearerToken)
 import Yoga.JSON (writeJSON)
 

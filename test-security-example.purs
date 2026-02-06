@@ -4,7 +4,7 @@ import Prelude
 import Type.Proxy (Proxy(..))
 import Data.Tuple.Nested (type (/\))
 import Yoga.Fastify.Om.Route (GET, POST, Route, Request, JSON, BearerToken, buildOpenAPISpec, Description)
-import Yoga.Fastify.Om.Path (type (:))
+import Yoga.HTTP.API.Path (type (:))
 import Effect (Effect)
 import Effect.Console (log)
 import Yoga.JSON (writeJSON)

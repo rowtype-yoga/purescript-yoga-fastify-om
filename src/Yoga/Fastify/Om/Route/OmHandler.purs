@@ -33,8 +33,8 @@ import Record.Builder (Builder)
 import Record.Builder as Builder
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
-import Yoga.Fastify.Om.Route.Response (Response(..))
-import Yoga.Fastify.Om.Route.RouteHandler (Handler, class RouteHandler, mkHandler)
+import Yoga.HTTP.API.Route.Response (Response(..))
+import Yoga.HTTP.API.Route.RouteHandler (Handler, class RouteHandler, mkHandler)
 import Yoga.Om (Om, handleErrors', runOm)
 
 --------------------------------------------------------------------------------

@@ -19,7 +19,7 @@ import Unsafe.Coerce (unsafeCoerce)
 import ViTest (ViTest, describe, test)
 import ViTest.Expect (expectToBe)
 import ViTest.Expect.Either (expectRight, expectIsLeft, expectLeftContains)
-import Yoga.Fastify.Om.Path (Root, Lit, Capture, type (/), type (:?), Required)
+import Yoga.HTTP.API.Path (Root, Lit, Capture, type (/), type (:?), Required)
 import Yoga.Fastify.Om.Route (HeaderError(..), BearerToken(..), class HeaderValue, parseHeader, printHeader, parseHeaders, Route, Request, Response, GET, POST, PUT, toOpenAPI, renderMethod, renderHeadersSchema, renderResponseHeadersSchema, renderResponseSchema, renderPathParamsSchema, renderQueryParamsSchema, renderRequestBodySchema, JSON, FormData, NoBody)
 import Yoga.JSON (writeJSON)
 

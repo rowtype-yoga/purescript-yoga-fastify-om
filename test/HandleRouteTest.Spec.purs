@@ -9,10 +9,10 @@ import Effect (Effect)
 import Effect.Aff (Aff)
 import Foreign.Object as Object
 import Type.Proxy (Proxy(..))
-import Yoga.Fastify.Om.Route.ParsePathParams (parsePathParams)
-import Yoga.Fastify.Om.Route.ParseQueryParams (parseQueryParamsFromObject)
-import Yoga.Fastify.Om.Route.ParseBody (parseBody)
-import Yoga.Fastify.Om.Route.Encoding as Encoding
+import Yoga.Fastify.Route.ParsePathParams (parsePathParams)
+import Yoga.Fastify.Route.ParseQueryParams (parseQueryParamsFromObject)
+import Yoga.Fastify.Route.ParseBody (parseBody)
+import Yoga.HTTP.API.Route.Encoding as Encoding
 import Unsafe.Coerce (unsafeCoerce)
 import ViTest (ViTest, describe, test)
 import ViTest.Expect (expectToBe)

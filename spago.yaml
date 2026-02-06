@@ -6,6 +6,8 @@ workspace:
       path: ../purescript-yoga-om
     yoga-fastify:
       path: ../purescript-yoga-fastify
+    yoga-http-api:
+      path: ../purescript-yoga-http-api
     yoga-om-layer:
       path: ../purescript-yoga-om-layer
     vitest:
@@ -38,6 +40,7 @@ package:
     - strings: ">=6.0.0 <7.0.0"
     - variant: ">=8.0.0 <9.0.0"
     - yoga-fastify
+    - yoga-http-api
     - yoga-json: ">=5.0.0 <6.0.0"
     - yoga-om
     - yoga-om-layer

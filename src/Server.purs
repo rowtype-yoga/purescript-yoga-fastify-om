@@ -20,7 +20,7 @@ import Foreign (Foreign)
 import Foreign.Object as FObject
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
-import Yoga.Fastify.Om.Path (class ParseParam, parseParam, type (/), type (:), type (:>), type (:?))
+import Yoga.HTTP.API.Path (class ParseParam, parseParam, type (/), type (:), type (:>), type (:?))
 import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, mkHandler, JSON, handleRoute, respondNoHeaders, handle, respond, reject, buildOpenAPISpec', class HeaderValueType, BearerToken, Description, Example, Enum, class RenderJSONSchema, renderJSONSchema, class HasEnum, enum)
 import Yoga.JSON (writeJSON, class WriteForeign, class ReadForeign)
 import Yoga.JSON.Generics (genericWriteForeignEnum, genericReadForeignEnum)

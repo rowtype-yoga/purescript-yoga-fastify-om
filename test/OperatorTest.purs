@@ -10,7 +10,7 @@ import Type.RowList (class RowToList, RowList, Cons, Nil)
 import Data.String as String
 
 -- Import path types from production module
-import Yoga.Fastify.Om.Path (Path, PathCons, Param, QueryParams, type (/), type (:>), type (:?))
+import Yoga.HTTP.API.Path (Path, PathCons, Param, QueryParams, type (/), type (:>), type (:?))
 
 -- Test usage
 type TestPath1 = "users" :> Int

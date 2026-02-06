@@ -3,7 +3,7 @@ module TestOpenAPIExample where
 import Prelude
 import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Om.Route (GET, POST, Route, route, toOpenAPI, Request, JSON, BearerToken)
-import Yoga.Fastify.Om.Path (Lit, Capture, type (/), type (:?), Required)
+import Yoga.HTTP.API.Path (Lit, Capture, type (/), type (:?), Required)
 import Effect (Effect)
 import Effect.Console (log)
 

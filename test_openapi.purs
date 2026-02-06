@@ -4,7 +4,7 @@ import Prelude
 import Effect (Effect)
 import Effect.Console (log)
 import Type.Proxy (Proxy(..))
-import Yoga.Fastify.Om.Path (Root)
+import Yoga.HTTP.API.Path (Root)
 import Yoga.Fastify.Om.Route (Route, ResponseData, GET, POST, toOpenAPI)
 
 type SimpleRoute = Route GET Root () (ok :: ResponseData () String)

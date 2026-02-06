@@ -8,10 +8,10 @@ import Data.Variant as Variant
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Type.Proxy (Proxy(..))
-import Yoga.Fastify.Fastify (StatusCode(..))
-import Yoga.Fastify.Om.Path (Root)
+import Yoga.HTTP.API.Route.StatusCode (StatusCode(..))
+import Yoga.HTTP.API.Path (Root)
 import Yoga.Fastify.Om.Route (GET, POST, PUT, Route, Request, Response(..), respondNoHeaders, respondWith, toOpenAPI, statusCodeFor, statusCodeToString)
-import Yoga.Fastify.Om.Route.Response (respond) as Response
+import Yoga.HTTP.API.Route.Response (respond) as Response
 import ViTest (ViTest, describe, test)
 import ViTest.Expect (expectToBe)
 

@@ -9,7 +9,7 @@ module Yoga.Fastify.Om.Endpoint
   -- * Response Types
   , Response
   , SimpleResponse
-  , module Yoga.Fastify.Om.Route.SetHeaders
+  , module Yoga.Fastify.Route.SetHeaders
   -- * Request Types
   , OptsR
   , OptsOpt
@@ -50,7 +50,7 @@ import Yoga.Fastify.Fastify (FastifyReply, RouteURL(..), StatusCode(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.Fastify.Om as FO
 import Yoga.Fastify.Om.RequestBody (RequestBody(..))
-import Yoga.Fastify.Om.Route.SetHeaders (class SetHeaders, setHeaders)
+import Yoga.Fastify.Route.SetHeaders (class SetHeaders, setHeaders)
 import Yoga.JSON (class ReadForeign, class WriteForeign, read, writeImpl)
 import Yoga.Om as Om
 import Uncurried.RWSET (withRWSET)
