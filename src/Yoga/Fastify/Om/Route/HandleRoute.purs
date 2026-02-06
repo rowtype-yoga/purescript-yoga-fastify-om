@@ -17,7 +17,7 @@ import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Fastify (Fastify, FastifyReply, FastifyRequest, HTTPMethod(..), RouteURL(..), StatusCode(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.Fastify.Om.Path (class PathPattern, pathPattern)
-import Yoga.Fastify.Om.Route.Route (Route)
+import Yoga.Fastify.Om.Route.Route (Route, class ConvertResponseVariant)
 import Yoga.Fastify.Om.Route.HandleResponse (class HandleResponse, handleResponse)
 import Yoga.Fastify.Om.Route.Handler (Request, class DefaultRequestFields, class SegmentPathParams, class SegmentQueryParams, class EncodingBody)
 import Yoga.Fastify.Om.Route.RouteHandler (Handler, class RouteHandler, runHandler)
@@ -29,7 +29,7 @@ import Yoga.Fastify.Om.Route.RenderMethod (class RenderMethod, renderMethod)
 import Yoga.JSON (writeJSON, write)
 
 handleRoute
-  :: forall method segments partialRequest o_ fullHeaders fullEncoding respVariant
+  :: forall method segments partialRequest o_ fullHeaders fullEncoding userResp respVariant
        pathParams queryParams body
    . Row.Union partialRequest o_ (headers :: Record fullHeaders, body :: fullEncoding)
   => DefaultRequestFields partialRequest fullHeaders fullEncoding
@@ -42,9 +42,10 @@ handleRoute
   => ParseQueryParamsFromObject queryParams
   => ParseHeaders fullHeaders
   => ParseBody fullEncoding body
+  => ConvertResponseVariant userResp respVariant
   => HandleResponse respVariant
-  => RouteHandler (Route method segments (Request partialRequest) respVariant) pathParams queryParams fullHeaders body respVariant
-  => Handler (Route method segments (Request partialRequest) respVariant)
+  => RouteHandler (Route method segments (Request (Record partialRequest)) userResp) pathParams queryParams fullHeaders body respVariant
+  => Handler (Route method segments (Request (Record partialRequest)) userResp)
   -> Fastify
   -> Effect Unit
 handleRoute handler fastify =

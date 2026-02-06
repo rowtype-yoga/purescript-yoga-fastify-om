@@ -119,14 +119,10 @@ data Required a
 -- |   pathPattern (Proxy :: _ (Path Root)) = "/"
 -- |   pathPattern (Proxy :: _ (Path (Lit "users"))) = "/users"
 -- |   pathPattern (Proxy :: _ (Path (Lit "users" / Capture "id" Int))) = "/users/:id"
-class PathPattern (path :: Type) where
+-- |   pathPattern (Proxy :: _ ("users" / "id" : Int)) = "/users/:id"
+class PathPattern :: forall k. k -> Constraint
+class PathPattern path where
   pathPattern :: Proxy path -> String
-
--- Path delegates to PathPatternSegs for the inner segments
-instance pathPatternPath ::
-  PathPatternSegs segs =>
-  PathPattern (Path segs) where
-  pathPattern _ = pathPatternSegs (Proxy :: Proxy segs)
 
 -- QueryParams wrapper delegates to inner path
 instance pathPatternQueryParams ::
@@ -134,6 +130,18 @@ instance pathPatternQueryParams ::
   ) =>
   PathPattern (QueryParams path params) where
   pathPattern _ = pathPattern (Proxy :: Proxy path)
+
+-- Path delegates to PathPatternSegs for the inner segments
+else instance pathPatternPath ::
+  PathPatternSegs segs =>
+  PathPattern (Path segs) where
+  pathPattern _ = pathPatternSegs (Proxy :: Proxy segs)
+
+-- Bare segments (no Path wrapper) delegate to PathPatternSegs
+else instance pathPatternBare ::
+  PathPatternSegs segs =>
+  PathPattern segs where
+  pathPattern _ = pathPatternSegs (Proxy :: Proxy segs)
 
 -- | Internal poly-kinded class for generating URL patterns from path segments.
 class PathPatternSegs :: forall k. k -> Constraint
@@ -187,6 +195,10 @@ else instance pathPatternSegsSymbolCons ::
   ) =>
   PathPatternSegs (PathCons s rest) where
   pathPatternSegs _ = "/" <> reflectSymbol (Proxy :: Proxy s) <> pathPatternSegs (Proxy :: Proxy rest)
+
+-- Path wrapper (unwrap and delegate)
+else instance pathPatternSegsPath :: PathPatternSegs segs => PathPatternSegs (Path segs) where
+  pathPatternSegs _ = pathPatternSegs (Proxy :: Proxy segs)
 
 -- Bare Symbol (single segment, from :> sugar)
 else instance pathPatternSegsSymbol :: IsSymbol s => PathPatternSegs s where

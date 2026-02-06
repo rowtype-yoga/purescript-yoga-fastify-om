@@ -15,7 +15,7 @@ import Yoga.Fastify.Om.Route.Handler
   , class SegmentPathParams
   , class SegmentQueryParams
   )
-import Yoga.Fastify.Om.Route.Route (Route)
+import Yoga.Fastify.Om.Route.Route (Route, class ConvertResponseVariant)
 
 -- | Type class that computes the handler function type from a Route type.
 class
@@ -34,9 +34,10 @@ instance
   , SegmentPathParams segments pathParams
   , SegmentQueryParams segments queryParams
   , EncodingBody fullEncoding body
+  , ConvertResponseVariant userResp respVariant
   ) =>
   RouteHandler
-    (Route method segments (Request partialRequest) respVariant)
+    (Route method segments (Request (Record partialRequest)) userResp)
     pathParams
     queryParams
     fullHeaders

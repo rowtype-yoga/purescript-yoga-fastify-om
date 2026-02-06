@@ -32,17 +32,17 @@ type ErrorMessage = { error :: String }
 
 -- Route with variant responses (ok and notFound)
 type TestRoute5 = Route GET Root
-  (Request ())
-  ( ok :: Response () User
-  , notFound :: Response () ErrorMessage
+  (Request {})
+  ( ok :: { body :: User }
+  , notFound :: { body :: ErrorMessage }
   )
 
 -- Route with variant responses including headers
 type TestRoute6 = Route POST Root
-  (Request (headers :: { authorization :: String }))
+  (Request { headers :: { authorization :: String } })
   ( created :: { headers :: { "Location" :: String }, body :: User }
-  , badRequest :: Response () ErrorMessage
-  , unauthorized :: Response () ErrorMessage
+  , badRequest :: { body :: ErrorMessage }
+  , unauthorized :: { body :: ErrorMessage }
   )
 
 --------------------------------------------------------------------------------

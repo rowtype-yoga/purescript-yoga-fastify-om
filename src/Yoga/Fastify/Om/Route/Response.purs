@@ -2,6 +2,7 @@ module Yoga.Fastify.Om.Route.Response
   ( Response(..)
   , ResponseData
   , class ToResponse
+  , class ToResponseRL
   , respond
   , respondWith
   , respondNoHeaders
@@ -12,7 +13,7 @@ import Data.Symbol (class IsSymbol)
 import Data.Variant (Variant)
 import Data.Variant as Variant
 import Prim.Row (class Cons)
-import Prim.Row as Row
+import Prim.RowList as RL
 import Type.Proxy (Proxy(..))
 
 --------------------------------------------------------------------------------
@@ -44,19 +45,24 @@ class ToResponse (recordType :: Type) (headers :: Row Type) (body :: Type) | rec
 -- Identity instance: Response is already Response
 instance toResponseIdentity :: ToResponse (Response headers body) headers body
 
--- Response with both headers and body
-else instance toResponseWithHeaders ::
-  ( Row.Cons "headers" (Record headers) rest1 recordRow
-  , Row.Cons "body" body rest2 recordRow
+-- Record instance: delegate to RowList-based helper
+else instance toResponseRecord ::
+  ( RL.RowToList recordRow rl
+  , ToResponseRL rl headers body
   ) =>
   ToResponse (Record recordRow) headers body
 
--- Response with only body (headers default to ())
-else instance toResponseBodyOnly ::
-  ( Row.Cons "body" body rest recordRow
-  , Row.Lacks "headers" recordRow
-  ) =>
-  ToResponse (Record recordRow) () body
+-- | RowList-based helper to distinguish records with/without headers.
+-- | Instance heads are distinguishable by the RowList structure.
+class ToResponseRL (rl :: RL.RowList Type) (headers :: Row Type) (body :: Type) | rl -> headers body
+
+-- { body :: b, headers :: Record h } (headers comes before body in sorted RowList)
+instance toResponseRLBodyHeaders ::
+  ToResponseRL (RL.Cons "body" body (RL.Cons "headers" (Record headers) RL.Nil)) headers body
+
+-- { body :: b } (no headers)
+else instance toResponseRLBodyOnly ::
+  ToResponseRL (RL.Cons "body" body RL.Nil) () body
 
 --------------------------------------------------------------------------------
 -- Response Construction Helpers

@@ -13,8 +13,8 @@ import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
 import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
-import Yoga.Fastify.Om.Path (class ParseParam, parseParam, type (/), type (:), type (:>), type (:?), Capture, Path)
-import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, mkHandler, JSON, Response, handleRoute, respondNoHeaders, handle, respond, reject)
+import Yoga.Fastify.Om.Path (class ParseParam, parseParam, type (/), type (:), type (:>), type (:?))
+import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, mkHandler, JSON, handleRoute, respondNoHeaders, handle, respond, reject)
 
 --------------------------------------------------------------------------------
 -- Example Types
@@ -30,9 +30,10 @@ type ErrorResponse = { error :: String }
 
 -- GET /health
 type HealthRoute = Route GET
-  (Path "health")
-  (Request ())
-  ( ok :: Response () { status :: String }
+  "health"
+  (Request {})
+  ( ok :: { body :: { status :: String } }
+  , notFound :: { body :: ErrorResponse }
   )
 
 healthHandler :: Handler HealthRoute
@@ -50,10 +51,10 @@ instance ParseParam UserId where
 
 -- GET /users/:id
 type UserRoute = Route GET
-  (Path ("users" / "id" : UserId))
-  (Request ())
-  ( ok :: Response () User
-  , notFound :: Response () ErrorResponse
+  ("users" / "id" : UserId)
+  (Request {})
+  ( ok :: { body :: User }
+  , notFound :: { body :: ErrorResponse }
   )
 
 userHandler :: Handler UserRoute
@@ -75,9 +76,9 @@ userHandlerOm = handle do
 
 -- GET /users?limit=10
 type UsersWithLimitRoute = Route GET
-  (Path "users" :? { limit :: Int })
-  (Request ())
-  ( ok :: Response () { users :: Array User, limit :: Maybe Int }
+  ("users" :? { limit :: Int })
+  (Request {})
+  ( ok :: { body :: { users :: Array User, limit :: Maybe Int } }
   )
 
 usersWithLimitHandler :: Handler UsersWithLimitRoute
@@ -91,10 +92,10 @@ usersWithLimitHandler = mkHandler \{ query } -> pure $ respondNoHeaders @"ok"
 
 -- POST /users
 type CreateUserRoute = Route POST
-  (Path "users")
-  (Request (body :: JSON CreateUserRequest))
-  ( created :: Response () User
-  , badRequest :: Response () ErrorResponse
+  "users"
+  (Request { body :: JSON CreateUserRequest })
+  ( created :: { body :: User }
+  , badRequest :: { body :: ErrorResponse }
   )
 
 createUserHandler :: Handler CreateUserRoute

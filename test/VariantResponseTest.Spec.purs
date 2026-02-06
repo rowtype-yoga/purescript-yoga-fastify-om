@@ -25,27 +25,27 @@ expectToEqual expected actual = expectToBe true (expected == actual)
 
 -- Simple variant route with ok and notFound responses
 type SimpleVariantRoute = Route GET Root
-  (Request ())
-  ( ok :: Response () String
-  , notFound :: Response () String
+  (Request {})
+  ( ok :: { body :: String }
+  , notFound :: { body :: String }
   )
 
 -- Variant route with multiple status codes
 type MultiStatusRoute = Route POST Root
-  (Request (headers :: { authorization :: String }))
+  (Request { headers :: { authorization :: String } })
   ( created :: { headers :: { "Location" :: String }, body :: User }
-  , badRequest :: Response () ErrorMessage
-  , unauthorized :: Response () ErrorMessage
+  , badRequest :: { body :: ErrorMessage }
+  , unauthorized :: { body :: ErrorMessage }
   )
 
 -- Variant route with many response types
 type ComplexVariantRoute = Route PUT Root
-  (Request ())
-  ( ok :: Response () User
+  (Request {})
+  ( ok :: { body :: User }
   , created :: { headers :: { "Location" :: String }, body :: User }
-  , badRequest :: Response () ErrorMessage
-  , notFound :: Response () ErrorMessage
-  , internalServerError :: Response () ErrorMessage
+  , badRequest :: { body :: ErrorMessage }
+  , notFound :: { body :: ErrorMessage }
+  , internalServerError :: { body :: ErrorMessage }
   )
 
 -- Example types for testing
@@ -242,9 +242,9 @@ testSimpleVariantOpenAPI = describe "OpenAPI Generation - Simple Variant" $ do
     let
       result = toOpenAPI
         @( Route GET Root
-            (Request ())
-            ( ok :: Response () String
-            , notFound :: Response () String
+            (Request {})
+            ( ok :: { body :: String }
+            , notFound :: { body :: String }
             )
         )
     -- Verify contains both 200 and 404
@@ -265,10 +265,10 @@ testComplexVariantOpenAPI = describe "OpenAPI Generation - Complex Variant" $ do
     let
       result = toOpenAPI
         @( Route POST Root
-            (Request (headers :: { authorization :: String }))
+            (Request { headers :: { authorization :: String } })
             ( created :: { headers :: { "Location" :: String }, body :: User }
-            , badRequest :: Response () ErrorMessage
-            , unauthorized :: Response () ErrorMessage
+            , badRequest :: { body :: ErrorMessage }
+            , unauthorized :: { body :: ErrorMessage }
             )
         )
     -- Verify contains 201, 400, and 401
@@ -299,7 +299,7 @@ testVariantWithHeaders = describe "OpenAPI Generation - Variant with Response He
     let
       result = toOpenAPI
         @( Route POST Root
-            (Request ())
+            (Request {})
             ( created :: { headers :: { "Location" :: String, "X-Request-Id" :: String }, body :: User }
             )
         )

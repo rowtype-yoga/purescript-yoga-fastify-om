@@ -28,12 +28,12 @@ import Yoga.Fastify.Om.Route.Encoding (JSON, NoBody)
 -- | Request data combining headers and body
 -- |
 -- | Usage:
--- |   Request (body :: JSON User)                            -- body only
--- |   Request (headers :: { auth :: String })                -- headers only
--- |   Request (body :: JSON User, headers :: { auth :: String })  -- both
--- |   Request ()                                             -- neither
-data Request :: Row Type -> Type
-data Request r = Request (Record r)
+-- |   Request { body :: JSON User }                            -- body only
+-- |   Request { headers :: { auth :: String } }                -- headers only
+-- |   Request { body :: JSON User, headers :: { auth :: String } }  -- both
+-- |   Request {}                                               -- neither
+data Request :: Type -> Type
+data Request r = Request r
 
 --------------------------------------------------------------------------------
 -- Handler Type
@@ -63,30 +63,32 @@ type HandlerFn pathParams queryParams reqHeaders body respVariant =
 --------------------------------------------------------------------------------
 
 -- | Extract the row of typed path parameters from a path segments type.
-class SegmentPathParams (segments :: Type) (params :: Row Type) | segments -> params
-
-instance segmentPathParamsPath ::
-  CaptureParams segs params =>
-  SegmentPathParams (Path segs) params
+class SegmentPathParams :: forall k. k -> Row Type -> Constraint
+class SegmentPathParams segments params | segments -> params
 
 instance segmentPathParamsQueryParams ::
+  CaptureParams path params =>
+  SegmentPathParams (QueryParams path (Record q)) params
+
+else instance segmentPathParamsCatchAll ::
   CaptureParams segs params =>
-  SegmentPathParams (QueryParams (Path segs) (Record q)) params
+  SegmentPathParams segs params
 
 --------------------------------------------------------------------------------
 -- SegmentQueryParams: Extract query param row from segments
 --------------------------------------------------------------------------------
 
 -- | Extract the row of typed query parameters from a path segments type.
-class SegmentQueryParams (segments :: Type) (query :: Row Type) | segments -> query
-
-instance segmentQueryParamsPath :: SegmentQueryParams (Path segs) ()
+class SegmentQueryParams :: forall k. k -> Row Type -> Constraint
+class SegmentQueryParams segments query | segments -> query
 
 instance segmentQueryParamsQP ::
   ( RL.RowToList params rl
   , SegmentQueryParamsRL rl query
   ) =>
   SegmentQueryParams (QueryParams path (Record params)) query
+
+else instance segmentQueryParamsCatchAll :: SegmentQueryParams segs ()
 
 -- | RowList-based processing of query param rows.
 -- | Required ty → ty (plain), otherwise → Maybe ty
@@ -139,6 +141,9 @@ else instance captureParamsParam ::
   ) =>
   CaptureParams (Param name ty) params
 
+-- Path wrapper: unwrap and delegate
+else instance captureParamsPath :: CaptureParams segs params => CaptureParams (Path segs) params
+
 -- Catch-all for literals (Symbol, Lit, Root, etc.): no params
 else instance captureParamsDefault :: CaptureParams s ()
 
@@ -164,7 +169,7 @@ class RequestHeaders (request :: Type) (headers :: Row Type) | request -> header
 instance requestHeadersRequest ::
   ( Row.Cons "headers" (Record headers) _rest requestRow
   ) =>
-  RequestHeaders (Request requestRow) headers
+  RequestHeaders (Request (Record requestRow)) headers
 
 --------------------------------------------------------------------------------
 -- RequestBody: Extract body encoding from a request type
@@ -178,7 +183,7 @@ class RequestBody (request :: Type) (encoding :: Type) | request -> encoding
 instance requestBodyRequest ::
   ( Row.Cons "body" encoding _rest requestRow
   ) =>
-  RequestBody (Request requestRow) encoding
+  RequestBody (Request (Record requestRow)) encoding
 
 --------------------------------------------------------------------------------
 -- DefaultRequestFields: Compute defaults for missing request fields
