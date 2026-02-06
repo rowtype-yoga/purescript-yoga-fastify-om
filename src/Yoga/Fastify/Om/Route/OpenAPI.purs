@@ -27,7 +27,7 @@ import Prim.RowList (class RowToList, RowList, Cons, Nil)
 import Prim.RowList as RL
 import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Om.Route.HeaderValue (class HeaderValueType, headerValueType)
-import Yoga.Fastify.Om.Route.Response (ResponseData(..))
+import Yoga.Fastify.Om.Route.Response (class ToResponse)
 import Yoga.Fastify.Om.Route.StatusCode (class StatusCodeMap, statusCodeFor, statusCodeToString)
 
 --------------------------------------------------------------------------------
@@ -171,14 +171,15 @@ class RenderVariantResponseSchemaRL (rl :: RowList Type) where
 instance renderVariantResponseSchemaRLNil :: RenderVariantResponseSchemaRL Nil where
   renderVariantResponseSchemaRL _ = FObject.empty
 
--- Recursive case: process ResponseData
+-- Recursive case: process Response/ResponseData (or record syntax via ToResponse)
 instance renderVariantResponseSchemaRLCons ::
   ( IsSymbol label
   , StatusCodeMap label
+  , ToResponse recordType headers body
   , RenderResponseHeadersSchema headers
   , RenderVariantResponseSchemaRL tail
   ) =>
-  RenderVariantResponseSchemaRL (Cons label (ResponseData headers body) tail) where
+  RenderVariantResponseSchemaRL (Cons label recordType tail) where
   renderVariantResponseSchemaRL _ =
     let
       statusCode = statusCodeFor (Proxy :: Proxy label)

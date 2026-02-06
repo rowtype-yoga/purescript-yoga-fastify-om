@@ -1,6 +1,6 @@
 module Yoga.Fastify.Om.Route.Handler
   ( HandlerFn
-  , Request
+  , Request(..)
   , class DefaultRequestFields
   , class DefaultRequestFieldsRL
   , class SegmentPathParams
@@ -22,17 +22,18 @@ import Yoga.Fastify.Om.Path (Path, PathCons, Capture, Param, QueryParams, Requir
 import Yoga.Fastify.Om.Route.Encoding (JSON, NoBody)
 
 --------------------------------------------------------------------------------
--- Request Type Alias
+-- Request Data Type
 --------------------------------------------------------------------------------
 
--- | Type alias for the request parameter of a Route.
+-- | Request data combining headers and body
 -- |
 -- | Usage:
--- |   Request ()                                    -- no headers or body
--- |   Request (body :: JSON User)                   -- body only
--- |   Request (headers :: { auth :: String })       -- headers only
+-- |   Request (body :: JSON User)                            -- body only
+-- |   Request (headers :: { auth :: String })                -- headers only
 -- |   Request (body :: JSON User, headers :: { auth :: String })  -- both
-type Request r = Record r
+-- |   Request ()                                             -- neither
+data Request :: Row Type -> Type
+data Request r = Request (Record r)
 
 --------------------------------------------------------------------------------
 -- Handler Type
@@ -155,29 +156,29 @@ instance encodingBodyNoBody :: EncodingBody NoBody Unit
 -- RequestHeaders: Extract headers row from a request type
 --------------------------------------------------------------------------------
 
--- | Extract the headers row from a request record type.
+-- | Extract the headers row from a Request type.
 -- |
--- | The request is expected to be a Record with a `headers` field.
+-- | The request is expected to have a `headers` field.
 class RequestHeaders (request :: Type) (headers :: Row Type) | request -> headers
 
-instance requestHeadersRecord ::
+instance requestHeadersRequest ::
   ( Row.Cons "headers" (Record headers) _rest requestRow
   ) =>
-  RequestHeaders (Record requestRow) headers
+  RequestHeaders (Request requestRow) headers
 
 --------------------------------------------------------------------------------
 -- RequestBody: Extract body encoding from a request type
 --------------------------------------------------------------------------------
 
--- | Extract the body encoding type from a request record type.
+-- | Extract the body encoding type from a Request type.
 -- |
--- | The request is expected to be a Record with a `body` field.
+-- | The request is expected to have a `body` field.
 class RequestBody (request :: Type) (encoding :: Type) | request -> encoding
 
-instance requestBodyRecord ::
+instance requestBodyRequest ::
   ( Row.Cons "body" encoding _rest requestRow
   ) =>
-  RequestBody (Record requestRow) encoding
+  RequestBody (Request requestRow) encoding
 
 --------------------------------------------------------------------------------
 -- DefaultRequestFields: Compute defaults for missing request fields

@@ -19,7 +19,7 @@ import Prim.RowList as RL
 import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Fastify (FastifyReply)
 import Yoga.Fastify.Fastify as F
-import Yoga.Fastify.Om.Route.Response (ResponseData(..))
+import Yoga.Fastify.Om.Route.Response (Response(..))
 import Yoga.Fastify.Om.Route.SetHeaders (class SetHeaders, setHeaders)
 import Yoga.Fastify.Om.Route.StatusCode (class StatusCodeMap, statusCodeFor)
 import Yoga.JSON (class WriteForeign, writeImpl)
@@ -42,15 +42,15 @@ instance
   , SetHeaders headers
   , WriteForeign body
   , HandleResponseRL tail rest
-  , Cons label (ResponseData headers body) rest respVariant
+  , Cons label (Response headers body) rest respVariant
   , Lacks label rest
   ) =>
-  HandleResponseRL (RL.Cons label (ResponseData headers body) tail) respVariant where
+  HandleResponseRL (RL.Cons label (Response headers body) tail) respVariant where
   handleResponseRL _ variant reply =
     Variant.on (Proxy :: Proxy label) handler rest variant
     where
-    handler :: ResponseData headers body -> Aff Unit
-    handler (ResponseData rd) = do
+    handler :: Response headers body -> Aff Unit
+    handler (Response rd) = do
       let statusCode = statusCodeFor (Proxy :: Proxy label)
       void $ liftEffect $ F.status statusCode reply
       void $ liftEffect $ setHeaders rd.headers reply

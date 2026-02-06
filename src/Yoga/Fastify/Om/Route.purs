@@ -38,7 +38,7 @@ import Yoga.Fastify.Om.Route.ParseHeaders (class ParseHeaders, class ParseHeader
 import Yoga.Fastify.Om.Route.ParsePathParams (class ParsePathParams, parsePathParams)
 import Yoga.Fastify.Om.Route.ParseQueryParams (class ParseQueryParamsFromObject, parseQueryParamsFromObject)
 import Yoga.Fastify.Om.Route.RenderMethod (class RenderMethod, renderMethod)
-import Yoga.Fastify.Om.Route.Response (ResponseData(..), respondNoHeaders, respondWith)
+import Yoga.Fastify.Om.Route.Response (Response(..), ResponseData, respondNoHeaders, respondWith)
 import Yoga.Fastify.Om.Route.Route (Route(..), route)
 import Yoga.Fastify.Om.Route.SetHeaders (class SetHeaders, setHeaders)
 import Yoga.Fastify.Om.Route.OmHandler (handle, respond, respondWithHeaders, reject, rejectWithHeaders, class Is2xxStatus, class SplitResponse, class SplitResponseRL, class SplitResponseEntry, class BuildErrorHandlers, buildErrorHandlers)

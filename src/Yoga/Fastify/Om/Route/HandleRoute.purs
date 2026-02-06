@@ -19,7 +19,7 @@ import Yoga.Fastify.Fastify as F
 import Yoga.Fastify.Om.Path (class PathPattern, pathPattern)
 import Yoga.Fastify.Om.Route.Route (Route)
 import Yoga.Fastify.Om.Route.HandleResponse (class HandleResponse, handleResponse)
-import Yoga.Fastify.Om.Route.Handler (class DefaultRequestFields, class SegmentPathParams, class SegmentQueryParams, class EncodingBody)
+import Yoga.Fastify.Om.Route.Handler (Request, class DefaultRequestFields, class SegmentPathParams, class SegmentQueryParams, class EncodingBody)
 import Yoga.Fastify.Om.Route.RouteHandler (Handler, class RouteHandler, runHandler)
 import Yoga.Fastify.Om.Route.ParseBody (class ParseBody, parseBody)
 import Yoga.Fastify.Om.Route.ParseHeaders (class ParseHeaders, parseHeaders)
@@ -43,8 +43,8 @@ handleRoute
   => ParseHeaders fullHeaders
   => ParseBody fullEncoding body
   => HandleResponse respVariant
-  => RouteHandler (Route method segments (Record partialRequest) respVariant) pathParams queryParams fullHeaders body respVariant
-  => Handler (Route method segments (Record partialRequest) respVariant)
+  => RouteHandler (Route method segments (Request partialRequest) respVariant) pathParams queryParams fullHeaders body respVariant
+  => Handler (Route method segments (Request partialRequest) respVariant)
   -> Fastify
   -> Effect Unit
 handleRoute handler fastify =

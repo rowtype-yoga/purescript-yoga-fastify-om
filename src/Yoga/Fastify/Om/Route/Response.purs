@@ -1,5 +1,7 @@
 module Yoga.Fastify.Om.Route.Response
-  ( ResponseData(..)
+  ( Response(..)
+  , ResponseData
+  , class ToResponse
   , respond
   , respondWith
   , respondNoHeaders
@@ -10,6 +12,7 @@ import Data.Symbol (class IsSymbol)
 import Data.Variant (Variant)
 import Data.Variant as Variant
 import Prim.Row (class Cons)
+import Prim.Row as Row
 import Type.Proxy (Proxy(..))
 
 --------------------------------------------------------------------------------
@@ -18,10 +21,42 @@ import Type.Proxy (Proxy(..))
 
 -- | Response data combining headers and body
 -- | This is a data type (not type alias) to work with type class instances
-data ResponseData headers body = ResponseData
+data Response headers body = Response
   { headers :: Record headers
   , body :: body
   }
+
+-- | Deprecated alias for backwards compatibility
+type ResponseData headers body = Response headers body
+
+--------------------------------------------------------------------------------
+-- ToResponse: Convert record syntax to Response type
+--------------------------------------------------------------------------------
+
+-- | Convert user-friendly record syntax to Response type.
+-- |
+-- | Supports:
+-- |   Response headers body → Response headers body (identity)
+-- |   { body :: User } → Response () User
+-- |   { headers :: { "Location" :: String }, body :: User } → Response ("Location" :: String) User
+class ToResponse (recordType :: Type) (headers :: Row Type) (body :: Type) | recordType -> headers body
+
+-- Identity instance: Response is already Response
+instance toResponseIdentity :: ToResponse (Response headers body) headers body
+
+-- Response with both headers and body
+else instance toResponseWithHeaders ::
+  ( Row.Cons "headers" (Record headers) rest1 recordRow
+  , Row.Cons "body" body rest2 recordRow
+  ) =>
+  ToResponse (Record recordRow) headers body
+
+-- Response with only body (headers default to ())
+else instance toResponseBodyOnly ::
+  ( Row.Cons "body" body rest recordRow
+  , Row.Lacks "headers" recordRow
+  ) =>
+  ToResponse (Record recordRow) () body
 
 --------------------------------------------------------------------------------
 -- Response Construction Helpers
@@ -31,13 +66,13 @@ data ResponseData headers body = ResponseData
 -- |
 -- | Example:
 -- |   respond (Proxy :: _ "created")
--- |     (ResponseData { headers: { "Location": "/users/123" }, body: user })
+-- |     (Response { headers: { "Location": "/users/123" }, body: user })
 respond
   :: forall label headers body r1 r2
    . IsSymbol label
-  => Cons label (ResponseData headers body) r1 r2
+  => Cons label (Response headers body) r1 r2
   => Proxy label
-  -> ResponseData headers body
+  -> Response headers body
   -> Variant r2
 respond label rd = Variant.inj label rd
 
@@ -50,13 +85,13 @@ respond label rd = Variant.inj label rd
 respondWith
   :: forall label headers body r1 r2
    . IsSymbol label
-  => Cons label (ResponseData headers body) r1 r2
+  => Cons label (Response headers body) r1 r2
   => Proxy label
   -> Record headers
   -> body
   -> Variant r2
 respondWith label headers body =
-  Variant.inj label (ResponseData { headers, body })
+  Variant.inj label (Response { headers, body })
 
 -- | Construct a variant response with no custom headers (most common case)
 -- |
@@ -66,8 +101,8 @@ respondWith label headers body =
 respondNoHeaders
   :: forall @label body r1 r2
    . IsSymbol label
-  => Cons label (ResponseData () body) r1 r2
+  => Cons label (Response () body) r1 r2
   => body
   -> Variant r2
 respondNoHeaders body =
-  Variant.inj (Proxy :: Proxy label) (ResponseData { headers: {}, body })
+  Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body })

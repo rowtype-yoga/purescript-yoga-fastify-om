@@ -238,7 +238,9 @@ instance (FO.ParseParam inner) => ParseQueryFieldValue (Maybe inner) where
         let
           valueStr = unsafeCoerce foreignVal :: String
         in
-          FO.parseParam valueStr
+          case FO.parseParam valueStr of
+            Left _ -> Nothing
+            Right parsed -> Just parsed
 
 else instance (FO.ParseParam ty) => ParseQueryFieldValue ty where
   parseQueryFieldValue _ keyName queryObj =
@@ -249,8 +251,8 @@ else instance (FO.ParseParam ty) => ParseQueryFieldValue ty where
           valueStr = unsafeCoerce foreignVal :: String
         in
           case FO.parseParam valueStr of
-            Nothing -> Left $ "Invalid query parameter: " <> keyName
-            Just value -> Right value
+            Left err -> Left $ "Invalid query parameter '" <> keyName <> "': " <> err
+            Right value -> Right value
 
 --------------------------------------------------------------------------------
 -- Headers Parsing

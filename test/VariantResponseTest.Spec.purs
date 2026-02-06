@@ -10,7 +10,7 @@ import Effect.Aff (Aff)
 import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Fastify (StatusCode(..))
 import Yoga.Fastify.Om.Path (Root)
-import Yoga.Fastify.Om.Route (GET, POST, PUT, Route, Request, ResponseData(..), respondNoHeaders, respondWith, toOpenAPI, statusCodeFor, statusCodeToString)
+import Yoga.Fastify.Om.Route (GET, POST, PUT, Route, Request, Response(..), respondNoHeaders, respondWith, toOpenAPI, statusCodeFor, statusCodeToString)
 import Yoga.Fastify.Om.Route.Response (respond) as Response
 import ViTest (ViTest, describe, test)
 import ViTest.Expect (expectToBe)
@@ -26,26 +26,26 @@ expectToEqual expected actual = expectToBe true (expected == actual)
 -- Simple variant route with ok and notFound responses
 type SimpleVariantRoute = Route GET Root
   (Request ())
-  ( ok :: ResponseData () String
-  , notFound :: ResponseData () String
+  ( ok :: Response () String
+  , notFound :: Response () String
   )
 
 -- Variant route with multiple status codes
 type MultiStatusRoute = Route POST Root
   (Request (headers :: { authorization :: String }))
-  ( created :: ResponseData ("Location" :: String) User
-  , badRequest :: ResponseData () ErrorMessage
-  , unauthorized :: ResponseData () ErrorMessage
+  ( created :: { headers :: { "Location" :: String }, body :: User }
+  , badRequest :: Response () ErrorMessage
+  , unauthorized :: Response () ErrorMessage
   )
 
 -- Variant route with many response types
 type ComplexVariantRoute = Route PUT Root
   (Request ())
-  ( ok :: ResponseData () User
-  , created :: ResponseData ("Location" :: String) User
-  , badRequest :: ResponseData () ErrorMessage
-  , notFound :: ResponseData () ErrorMessage
-  , internalServerError :: ResponseData () ErrorMessage
+  ( ok :: Response () User
+  , created :: { headers :: { "Location" :: String }, body :: User }
+  , badRequest :: Response () ErrorMessage
+  , notFound :: Response () ErrorMessage
+  , internalServerError :: Response () ErrorMessage
   )
 
 -- Example types for testing
@@ -136,10 +136,10 @@ testRespondNoHeaders :: Effect ViTest
 testRespondNoHeaders = describe "respondNoHeaders" $ do
   _ <- test "constructs ok response with body" do
     let
-      response :: Variant (ok :: ResponseData () String, notFound :: ResponseData () String)
+      response :: Variant (ok :: Response () String, notFound :: Response () String)
       response = respondNoHeaders @"ok" "Success message"
       result = Variant.match
-        { ok: \(ResponseData rd) -> rd.body
+        { ok: \(Response rd) -> rd.body
         , notFound: \_ -> "Wrong variant!"
         }
         response
@@ -147,21 +147,21 @@ testRespondNoHeaders = describe "respondNoHeaders" $ do
 
   _ <- test "constructs notFound response with body" do
     let
-      response :: Variant (ok :: ResponseData () String, notFound :: ResponseData () String)
+      response :: Variant (ok :: Response () String, notFound :: Response () String)
       response = respondNoHeaders @"notFound" "Not found"
       result = Variant.match
         { ok: \_ -> "Wrong variant!"
-        , notFound: \(ResponseData rd) -> rd.body
+        , notFound: \(Response rd) -> rd.body
         }
         response
     expectToEqual "Not found" result
 
   test "response has empty headers" do
     let
-      response :: Variant (ok :: ResponseData () String)
+      response :: Variant (ok :: Response () String)
       response = respondNoHeaders @"ok" "Test"
       result = Variant.match
-        { ok: \(ResponseData rd) -> rd.headers
+        { ok: \(Response rd) -> rd.headers
         }
         response
     expectToEqual {} result
@@ -170,64 +170,64 @@ testRespondWith :: Effect ViTest
 testRespondWith = describe "respondWith" $ do
   _ <- test "constructs response with headers and body" do
     let
-      response :: Variant (created :: ResponseData ("Location" :: String) User)
+      response :: Variant (created :: Response ("Location" :: String) User)
       response = respondWith (Proxy :: _ "created")
         { "Location": "/users/123" }
         { id: 123, name: "Alice" }
       result = Variant.match
-        { created: \(ResponseData rd) -> rd.body.id
+        { created: \(Response rd) -> rd.body.id
         }
         response
     expectToEqual 123 result
 
   _ <- test "includes headers in response" do
     let
-      response :: Variant (created :: ResponseData ("Location" :: String) User)
+      response :: Variant (created :: Response ("Location" :: String) User)
       response = respondWith (Proxy :: _ "created")
         { "Location": "/users/456" }
         { id: 456, name: "Bob" }
       result = Variant.match
-        { created: \(ResponseData rd) -> rd.headers."Location"
+        { created: \(Response rd) -> rd.headers."Location"
         }
         response
     expectToEqual "/users/456" result
 
   test "constructs response with multiple headers" do
     let
-      response :: Variant (ok :: ResponseData ("X-Request-Id" :: String, "X-Version" :: String) String)
+      response :: Variant (ok :: Response ("X-Request-Id" :: String, "X-Version" :: String) String)
       response = respondWith (Proxy :: _ "ok")
         { "X-Request-Id": "req-123"
         , "X-Version": "v1"
         }
         "Response body"
       reqId = Variant.match
-        { ok: \(ResponseData rd) -> rd.headers."X-Request-Id"
+        { ok: \(Response rd) -> rd.headers."X-Request-Id"
         }
         response
       version = Variant.match
-        { ok: \(ResponseData rd) -> rd.headers."X-Version"
+        { ok: \(Response rd) -> rd.headers."X-Version"
         }
         response
     expectToBe true (reqId == "req-123" && version == "v1")
 
 testRespond :: Effect ViTest
 testRespond = describe "respond" $ do
-  test "constructs response from ResponseData record" do
+  test "constructs response from Response record" do
     let
-      responseData :: ResponseData ("Location" :: String) User
-      responseData = ResponseData
+      responseData :: Response ("Location" :: String) User
+      responseData = Response
         { headers: { "Location": "/users/789" }
         , body: { id: 789, name: "Charlie" }
         }
 
-      response :: Variant (created :: ResponseData ("Location" :: String) User)
+      response :: Variant (created :: Response ("Location" :: String) User)
       response = Response.respond (Proxy :: _ "created") responseData
       userId = Variant.match
-        { created: \(ResponseData rd) -> rd.body.id
+        { created: \(Response rd) -> rd.body.id
         }
         response
       location = Variant.match
-        { created: \(ResponseData rd) -> rd.headers."Location"
+        { created: \(Response rd) -> rd.headers."Location"
         }
         response
     expectToBe true (userId == 789 && location == "/users/789")
@@ -243,8 +243,8 @@ testSimpleVariantOpenAPI = describe "OpenAPI Generation - Simple Variant" $ do
       result = toOpenAPI
         @( Route GET Root
             (Request ())
-            ( ok :: ResponseData () String
-            , notFound :: ResponseData () String
+            ( ok :: Response () String
+            , notFound :: Response () String
             )
         )
     -- Verify contains both 200 and 404
@@ -266,9 +266,9 @@ testComplexVariantOpenAPI = describe "OpenAPI Generation - Complex Variant" $ do
       result = toOpenAPI
         @( Route POST Root
             (Request (headers :: { authorization :: String }))
-            ( created :: ResponseData ("Location" :: String) User
-            , badRequest :: ResponseData () ErrorMessage
-            , unauthorized :: ResponseData () ErrorMessage
+            ( created :: { headers :: { "Location" :: String }, body :: User }
+            , badRequest :: Response () ErrorMessage
+            , unauthorized :: Response () ErrorMessage
             )
         )
     -- Verify contains 201, 400, and 401
@@ -300,7 +300,7 @@ testVariantWithHeaders = describe "OpenAPI Generation - Variant with Response He
       result = toOpenAPI
         @( Route POST Root
             (Request ())
-            ( created :: ResponseData ("Location" :: String, "X-Request-Id" :: String) User
+            ( created :: { headers :: { "Location" :: String, "X-Request-Id" :: String }, body :: User }
             )
         )
     -- Verify includes Location and X-Request-Id in response headers
@@ -316,7 +316,7 @@ testVariantPatternMatching :: Effect ViTest
 testVariantPatternMatching = describe "Variant Pattern Matching" $ do
   _ <- test "can pattern match on ok variant" do
     let
-      response :: Variant (ok :: ResponseData () String, notFound :: ResponseData () String)
+      response :: Variant (ok :: Response () String, notFound :: Response () String)
       response = respondNoHeaders @"ok" "Success"
       result = Variant.match
         { ok: \_ -> "matched ok"
@@ -327,7 +327,7 @@ testVariantPatternMatching = describe "Variant Pattern Matching" $ do
 
   _ <- test "can pattern match on notFound variant" do
     let
-      response :: Variant (ok :: ResponseData () String, notFound :: ResponseData () String)
+      response :: Variant (ok :: Response () String, notFound :: Response () String)
       response = respondNoHeaders @"notFound" "Not found"
       result = Variant.match
         { ok: \_ -> "matched ok"
@@ -338,7 +338,7 @@ testVariantPatternMatching = describe "Variant Pattern Matching" $ do
 
   test "can match all cases with match" do
     let
-      response :: Variant (ok :: ResponseData () String, notFound :: ResponseData () String, badRequest :: ResponseData () String)
+      response :: Variant (ok :: Response () String, notFound :: Response () String, badRequest :: Response () String)
       response = respondNoHeaders @"badRequest" "Bad request"
       result = Variant.match
         { ok: \_ -> "matched ok"

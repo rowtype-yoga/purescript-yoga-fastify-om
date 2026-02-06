@@ -52,7 +52,9 @@ instance
           let
             valueStr = unsafeCoerce foreignVal :: String
           in
-            parseParam valueStr
+            case parseParam valueStr of
+              Left _ -> Nothing
+              Right v -> Just v
       restResult = parseQueryParamsFromObjectRL (Proxy :: Proxy tail) obj
     in
       case restResult of
@@ -79,8 +81,8 @@ else instance
             valueStr = unsafeCoerce foreignVal :: String
           in
             case parseParam valueStr of
-              Nothing -> Left [ "Invalid query parameter '" <> keyName <> "'" ]
-              Just value -> Right value
+              Left err -> Left [ "Invalid query parameter '" <> keyName <> "': " <> err ]
+              Right value -> Right value
       restResult = parseQueryParamsFromObjectRL (Proxy :: Proxy tail) obj
     in
       case valueResult, restResult of

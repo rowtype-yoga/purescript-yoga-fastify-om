@@ -9,6 +9,7 @@ import Prim.Row as Row
 import Unsafe.Coerce (unsafeCoerce)
 import Yoga.Fastify.Om.Route.Handler
   ( HandlerFn
+  , Request
   , class DefaultRequestFields
   , class EncodingBody
   , class SegmentPathParams
@@ -35,7 +36,7 @@ instance
   , EncodingBody fullEncoding body
   ) =>
   RouteHandler
-    (Route method segments (Record partialRequest) respVariant)
+    (Route method segments (Request partialRequest) respVariant)
     pathParams
     queryParams
     fullHeaders

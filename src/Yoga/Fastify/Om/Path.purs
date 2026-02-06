@@ -7,6 +7,7 @@ module Yoga.Fastify.Om.Path
   , type (/)
   , Param
   , type (:>)
+  , type (:)
   , QueryParams
   , type (:?)
   , Required
@@ -25,6 +26,7 @@ import Prelude
 
 import Data.Array (intercalate, uncons)
 import Data.Array as Array
+import Data.Either (Either(..))
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), split)
@@ -88,6 +90,7 @@ data PathCons left right
 data Param (name :: Symbol) (ty :: Type)
 
 infixr 8 type Param as :>
+infixr 8 type Param as :
 
 -- | Attach query parameters to a path
 -- |
@@ -210,16 +213,20 @@ class PathParams (path :: Type) (params :: Row Type) | path -> params
 
 -- | Parse a value from a String (used for path captures)
 class ParseParam (ty :: Type) where
-  parseParam :: String -> Maybe ty
+  parseParam :: String -> Either String ty
 
 instance parseParamString :: ParseParam String where
-  parseParam = Just
+  parseParam = Right
 
 instance parseParamInt :: ParseParam Int where
-  parseParam = Int.fromString
+  parseParam s = case Int.fromString s of
+    Nothing -> Left $ "Expected an integer but got: " <> s
+    Just n -> Right n
 
 instance parseParamNumber :: ParseParam Number where
-  parseParam s = Int.fromString s <#> Int.toNumber -- Simple version, doesn't handle floats
+  parseParam s = case Int.fromString s of
+    Nothing -> Left $ "Expected a number but got: " <> s
+    Just n -> Right (Int.toNumber n) -- Simple version, doesn't handle floats
 
 -- | Parse a URL string into a record of typed path parameters
 -- |
@@ -252,9 +259,9 @@ instance parsePathCapture ::
     -- Remove leading "/"
     let segments = Array.filter (_ /= "") $ split (Pattern "/") url
     case segments of
-      [ segment ] -> do
-        value <- (parseParam segment :: Maybe ty)
-        pure $ unsafeCoerce { value } -- Simplified: we'd need proper record construction
+      [ segment ] -> case (parseParam segment :: Either String ty) of
+        Left _ -> Nothing
+        Right value -> pure $ unsafeCoerce { value } -- Simplified: we'd need proper record construction
       _ -> Nothing
 
 -- Recursive case: Lit segment followed by more
@@ -293,7 +300,9 @@ instance parsePathCaptureCons ::
     case uncons segments of
       Just { head, tail } -> do
         -- Parse the captured segment
-        value <- parseParam head
+        value <- case parseParam head of
+          Left _ -> Nothing
+          Right v -> Just v
         -- Parse the rest
         restRecord <- parsePath (Proxy :: _ (Path rest)) ("/" <> intercalate "/" tail)
         -- Merge: add the captured value to the rest record

@@ -10,6 +10,7 @@ import Routing.Duplex.Generic.Syntax ((/))
 import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Om.Endpoint as E
 import Yoga.Fastify.Om.RequestBody (RequestBody(..))
+import Yoga.Fastify.Om.Route (Response)
 import Yoga.JSON (class ReadForeign, class WriteForeign)
 
 type User =
@@ -34,8 +35,8 @@ apiRoute = RD.root $ RG.sum
   , "GetUser": "users" / "1" / RG.noArgs
   }
 
-type CreateUserRequest = { body :: RequestBody CreateUserReq }
-type CreateUserResponse = { body :: User }
+type CreateUserRequest = Response () (RequestBody CreateUserReq)
+type CreateUserResponse = Response () User
 
 createUserHandler :: E.EndpointHandler () () ApiRoute CreateUserRequest CreateUserResponse
 createUserHandler { path, request } =
@@ -48,7 +49,7 @@ type ListUsersRequest =
   , body :: RequestBody Unit
   }
 
-type ListUsersResponse = { body :: Array User }
+type ListUsersResponse = Response () (Array User)
 
 listUsersHandler :: E.EndpointHandler () () ApiRoute ListUsersRequest ListUsersResponse
 listUsersHandler { request } = do
@@ -135,9 +136,9 @@ fullCreateHandler { path, request } =
       , body: { id: 0, name: "error", email: "error" }
       }
 
-type GetUserResponse = { body :: User }
+type GetUserResponse = Response () User
 
-getUserHandler :: E.EndpointHandler () () ApiRoute { body :: RequestBody Unit } GetUserResponse
+getUserHandler :: E.EndpointHandler () () ApiRoute Response () RequestBody Unit GetUserResponse
 getUserHandler { path } =
   case path of
     GetUser -> pure { body: { id: 1, name: "Alice", email: "alice@example.com" } }

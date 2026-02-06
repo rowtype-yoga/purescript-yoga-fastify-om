@@ -407,18 +407,20 @@ param key = do
 
 -- | Parse a String to a specific type (used internally by requiredParams)
 class ParseParam a where
-  parseParam :: String -> Maybe a
+  parseParam :: String -> Either String a
 
 instance ParseParam String where
-  parseParam = Just
+  parseParam = Right
 
 instance ParseParam Int where
-  parseParam = Int.fromString
+  parseParam s = case Int.fromString s of
+    Nothing -> Left $ "Expected an integer but got: " <> s
+    Just n -> Right n
 
 instance ParseParam Number where
   parseParam s = case Int.fromString s of
-    Just n -> Just (Int.toNumber n)
-    Nothing -> Nothing -- TODO: parse actual floats
+    Nothing -> Left $ "Expected a number but got: " <> s
+    Just n -> Right (Int.toNumber n)
 
 -- | Typeclass to parse multiple params into a record, accumulating all errors
 class ParseParams (rl :: RowList Type) (r :: Row Type) | rl -> r where
@@ -443,8 +445,8 @@ instance
       valueResult = case Object.lookup keyName ps of
         Nothing -> Left { missing: [ keyName ], invalid: [] }
         Just valueStr -> case parseParam valueStr of
-          Nothing -> Left { missing: [], invalid: [ keyName ] }
-          Just value -> Right value
+          Left _ -> Left { missing: [], invalid: [ keyName ] }
+          Right value -> Right value
       -- Parse the rest
       restResult = parseParams (Proxy :: Proxy tail) ps
     in
@@ -494,7 +496,9 @@ instance
     let
       key = Proxy :: Proxy name
       keyName = reflectSymbol key
-      value = Object.lookup keyName ps >>= parseParam
+      value = Object.lookup keyName ps >>= \v -> case parseParam v of
+        Left _ -> Nothing
+        Right parsed -> Just parsed
       rest = parseOptionalParams (Proxy :: Proxy tail) ps
     in
       Record.insert key value rest
@@ -646,8 +650,8 @@ instance
             valueStr = unsafeCoerce foreignVal :: String -- Safe: default parser produces strings
           in
             case parseParam valueStr of
-              Nothing -> Left { missing: [], invalid: [ keyName ] }
-              Just value -> Right value
+              Left _ -> Left { missing: [], invalid: [ keyName ] }
+              Right value -> Right value
       -- Parse the rest
       restResult = parseQueryParams (Proxy :: Proxy tail) qps
     in
@@ -702,7 +706,9 @@ instance
         foreignVal <- Object.lookup keyName qps
         -- TODO: Replace with yoga-json's ReadForeign for proper type-safe decoding
         let valueStr = unsafeCoerce foreignVal :: String -- Safe: default parser produces strings
-        parseParam valueStr
+        case parseParam valueStr of
+          Left _ -> Nothing
+          Right parsed -> Just parsed
       rest = parseOptionalQueryParams (Proxy :: Proxy tail) qps
     in
       Record.insert key value rest

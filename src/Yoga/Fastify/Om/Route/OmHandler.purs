@@ -27,7 +27,7 @@ import Record as Record
 import Record.Builder (Builder)
 import Record.Builder as Builder
 import Type.Proxy (Proxy(..))
-import Yoga.Fastify.Om.Route.Response (ResponseData(..))
+import Yoga.Fastify.Om.Route.Response (Response(..))
 import Yoga.Fastify.Om.Route.RouteHandler (Handler, class RouteHandler, mkHandler)
 import Yoga.Om (Om, handleErrors', runOm)
 
@@ -148,7 +148,7 @@ respond
    . RL.RowToList rec (RL.Cons label body RL.Nil)
   => Row.Cons label body () rec
   => IsSymbol label
-  => Row.Cons label (ResponseData () body) r1 r2
+  => Row.Cons label (Response () body) r1 r2
   => Record rec
   -> Om ctx err (Variant r2)
 
@@ -156,7 +156,7 @@ respond rec =
   let
     body = Record.get (Proxy :: Proxy label) rec
   in
-    pure (Variant.inj (Proxy :: Proxy label) (ResponseData { headers: {}, body }))
+    pure (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body }))
 
 -- | Return a 2xx response in an Om handler with custom headers.
 -- |
@@ -169,7 +169,7 @@ respondWithHeaders
    . RL.RowToList rec (RL.Cons label { headers :: Record headers, body :: body } RL.Nil)
   => Row.Cons label { headers :: Record headers, body :: body } () rec
   => IsSymbol label
-  => Row.Cons label (ResponseData headers body) r1 r2
+  => Row.Cons label (Response headers body) r1 r2
   => Record rec
   -> Om ctx err (Variant r2)
 
@@ -177,7 +177,7 @@ respondWithHeaders rec =
   let
     { headers, body } = Record.get (Proxy :: Proxy label) rec
   in
-    pure (Variant.inj (Proxy :: Proxy label) (ResponseData { headers, body }))
+    pure (Variant.inj (Proxy :: Proxy label) (Response { headers, body }))
 
 -- | Throw a non-2xx response in an Om handler (short-circuits) with no headers.
 -- |
@@ -190,15 +190,15 @@ reject
    . RL.RowToList rec (RL.Cons label body RL.Nil)
   => Row.Cons label body () rec
   => IsSymbol label
-  => Row.Cons label (ResponseData () body) _r1 err
-  => Row.Cons label (ResponseData () body) _r2 (exception :: Error | err)
+  => Row.Cons label (Response () body) _r1 err
+  => Row.Cons label (Response () body) _r2 (exception :: Error | err)
   => Record rec
   -> Om ctx err a
 reject rec =
   let
     body = Record.get (Proxy :: Proxy label) rec
   in
-    throwError (Variant.inj (Proxy :: Proxy label) (ResponseData { headers: {}, body }))
+    throwError (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body }))
 
 -- | Throw a non-2xx response in an Om handler (short-circuits) with custom headers.
 -- |
@@ -211,15 +211,15 @@ rejectWithHeaders
    . RL.RowToList rec (RL.Cons label { headers :: Record headers, body :: body } RL.Nil)
   => Row.Cons label { headers :: Record headers, body :: body } () rec
   => IsSymbol label
-  => Row.Cons label (ResponseData headers body) _r1 err
-  => Row.Cons label (ResponseData headers body) _r2 (exception :: Error | err)
+  => Row.Cons label (Response headers body) _r1 err
+  => Row.Cons label (Response headers body) _r2 (exception :: Error | err)
   => Record rec
   -> Om ctx err a
 rejectWithHeaders rec =
   let
     { headers, body } = Record.get (Proxy :: Proxy label) rec
   in
-    throwError (Variant.inj (Proxy :: Proxy label) (ResponseData { headers, body }))
+    throwError (Variant.inj (Proxy :: Proxy label) (Response { headers, body }))
 
 --------------------------------------------------------------------------------
 -- handle: Om-based route handler

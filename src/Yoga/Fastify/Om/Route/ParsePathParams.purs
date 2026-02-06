@@ -46,8 +46,8 @@ instance
       valueResult = case Object.lookup keyName obj of
         Nothing -> Left [ "Missing path parameter: " <> keyName ]
         Just str -> case parseParam str of
-          Nothing -> Left [ "Invalid path parameter '" <> keyName <> "': " <> str ]
-          Just value -> Right value
+          Left err -> Left [ "Invalid path parameter '" <> keyName <> "': " <> err ]
+          Right value -> Right value
       restResult = parsePathParamsRL (Proxy :: Proxy tail) obj
     in
       case valueResult, restResult of

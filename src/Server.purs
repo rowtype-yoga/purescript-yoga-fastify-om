@@ -2,17 +2,19 @@ module Example.Server where
 
 import Prelude
 
+import Control.Monad.Reader.Trans (ask)
+import Data.Either (Either(..))
+import Data.Int as Int
 import Data.Maybe (Maybe)
+import Data.Newtype (class Newtype, unwrap, wrap)
 import Effect (Effect)
 import Effect.Aff as Aff
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-
 import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
-import Yoga.Fastify.Om.Path (type (/), type (:?), Capture, Path)
-import Control.Monad.Reader.Trans (ask)
-import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, mkHandler, JSON, ResponseData, handleRoute, respondNoHeaders, handle, respond, reject)
+import Yoga.Fastify.Om.Path (class ParseParam, parseParam, type (/), type (:), type (:>), type (:?), Capture, Path)
+import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, mkHandler, JSON, Response, handleRoute, respondNoHeaders, handle, respond, reject)
 
 --------------------------------------------------------------------------------
 -- Example Types
@@ -30,23 +32,33 @@ type ErrorResponse = { error :: String }
 type HealthRoute = Route GET
   (Path "health")
   (Request ())
-  ( ok :: ResponseData () { status :: String }
+  ( ok :: Response () { status :: String }
   )
 
 healthHandler :: Handler HealthRoute
 healthHandler = mkHandler \_ -> pure $ respondNoHeaders @"ok" { status: "healthy" }
 
+newtype UserId = UserId Int
+
+derive instance Newtype UserId _
+derive newtype instance Eq UserId
+
+instance ParseParam UserId where
+  parseParam s = parseParam s >>= \n ->
+    if n > 0 then Right (UserId n)
+    else Left "UserId must be positive"
+
 -- GET /users/:id
 type UserRoute = Route GET
-  (Path ("users" / Capture "id" Int))
+  (Path ("users" / "id" : UserId))
   (Request ())
-  ( ok :: ResponseData () User
-  , notFound :: ResponseData () ErrorResponse
+  ( ok :: Response () User
+  , notFound :: Response () ErrorResponse
   )
 
 userHandler :: Handler UserRoute
 userHandler = mkHandler \{ path } ->
-  if path.id == 1 then
+  if path.id == UserId 1 then
     pure $ respondNoHeaders @"ok"
       { id: 1, name: "Alice", email: "alice@example.com" }
   else
@@ -57,7 +69,7 @@ userHandler = mkHandler \{ path } ->
 userHandlerOm :: Handler UserRoute
 userHandlerOm = handle do
   { path } <- ask
-  when (path.id /= 1) $
+  when (path.id /= UserId 1) do
     reject { notFound: { error: "User not found" } }
   respond { ok: { id: 1, name: "Alice", email: "alice@example.com" } }
 
@@ -65,7 +77,7 @@ userHandlerOm = handle do
 type UsersWithLimitRoute = Route GET
   (Path "users" :? { limit :: Int })
   (Request ())
-  ( ok :: ResponseData () { users :: Array User, limit :: Maybe Int }
+  ( ok :: Response () { users :: Array User, limit :: Maybe Int }
   )
 
 usersWithLimitHandler :: Handler UsersWithLimitRoute
@@ -81,8 +93,8 @@ usersWithLimitHandler = mkHandler \{ query } -> pure $ respondNoHeaders @"ok"
 type CreateUserRoute = Route POST
   (Path "users")
   (Request (body :: JSON CreateUserRequest))
-  ( created :: ResponseData () User
-  , badRequest :: ResponseData () ErrorResponse
+  ( created :: Response () User
+  , badRequest :: Response () ErrorResponse
   )
 
 createUserHandler :: Handler CreateUserRoute
@@ -104,8 +116,9 @@ createServer = do
 
   -- Register routes
   handleRoute healthHandler fastify
-  handleRoute userHandler fastify
+  -- handleRoute userHandler fastify
   handleRoute usersWithLimitHandler fastify
+  handleRoute userHandlerOm fastify
   handleRoute createUserHandler fastify
 
   pure fastify
