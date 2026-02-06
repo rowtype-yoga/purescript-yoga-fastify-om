@@ -4,24 +4,23 @@ import Prelude
 
 import Control.Monad.Reader.Trans (ask)
 import Data.Either (Either(..))
-import Data.Int as Int
 import Data.Maybe (Maybe(..))
-import Data.Newtype (class Newtype, unwrap, wrap)
+import Data.Newtype (class Newtype)
+import Data.Generic.Rep (class Generic)
+import Data.Show.Generic (genericShow)
+import Data.Tuple.Nested (type (/\))
 import Effect (Effect)
 import Effect.Aff as Aff
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..))
-import Yoga.Fastify.Fastify as F
-import Data.Generic.Rep (class Generic)
-import Data.Show.Generic (genericShow)
-import Data.Tuple.Nested (type (/\), (/\))
 import Foreign (Foreign)
 import Foreign.Object as FObject
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
-import Yoga.HTTP.API.Path (class ParseParam, parseParam, type (/), type (:), type (:>), type (:?))
-import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, mkHandler, JSON, handleRoute, respondNoHeaders, handle, respond, reject, buildOpenAPISpec', class HeaderValueType, BearerToken, Description, Example, Enum, class RenderJSONSchema, renderJSONSchema, class HasEnum, enum)
+import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..))
+import Yoga.Fastify.Fastify as F
+import Yoga.HTTP.API.Path (class ParseParam, parseParam, type (/), type (:), type (:?))
+import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respond, reject, buildOpenAPISpec', class HeaderValueType, BearerToken, Enum, class RenderJSONSchema, class HasEnum, enum)
 import Yoga.JSON (writeJSON, class WriteForeign, class ReadForeign)
 import Yoga.JSON.Generics (genericWriteForeignEnum, genericReadForeignEnum)
 
@@ -82,7 +81,8 @@ type HealthRoute = Route GET
   )
 
 healthHandler :: Handler HealthRoute
-healthHandler = mkHandler \_ -> pure $ respondNoHeaders @"ok" { status: "healthy" }
+healthHandler = handle do
+  respond { ok: { status: "healthy" } }
 
 newtype UserId = UserId Int
 
@@ -107,17 +107,7 @@ type UserRoute = Route GET
   )
 
 userHandler :: Handler UserRoute
-userHandler = mkHandler \{ path } ->
-  if path.id == UserId 1 then
-    pure $ respondNoHeaders @"ok"
-      { id: 1, name: "Alice", email: "alice@example.com", role: Admin }
-  else
-    pure $ respondNoHeaders @"notFound"
-      { error: "User not found" }
-
--- GET /users/:id (Om version — short-circuiting style)
-userHandlerOm :: Handler UserRoute
-userHandlerOm = handle do
+userHandler = handle do
   { path } <- ask
   when (path.id /= UserId 1) do
     reject { notFound: { error: "User not found" } }
@@ -131,13 +121,17 @@ type UsersWithLimitRoute = Route GET
   )
 
 usersWithLimitHandler :: Handler UsersWithLimitRoute
-usersWithLimitHandler = mkHandler \{ query } -> pure $ respondNoHeaders @"ok"
-  { users:
-      [ { id: 1, name: "Alice", email: "alice@example.com", role: Admin }
-      , { id: 2, name: "Bob", email: "bob@example.com", role: Member }
-      ]
-  , limit: query.limit
-  }
+usersWithLimitHandler = handle do
+  { query } <- ask
+  respond
+    { ok:
+        { users:
+            [ { id: 1, name: "Alice", email: "alice@example.com", role: Admin }
+            , { id: 2, name: "Bob", email: "bob@example.com", role: Member }
+            ]
+        , limit: query.limit
+        }
+    }
 
 -- POST /users (with authentication)
 type CreateUserRoute = Route POST
@@ -153,13 +147,11 @@ type CreateUserRoute = Route POST
   )
 
 createUserHandler :: Handler CreateUserRoute
-createUserHandler = mkHandler \{ body } ->
-  if body.name == "" then
-    pure $ respondNoHeaders @"badRequest"
-      { error: "Name cannot be empty" }
-  else
-    pure $ respondNoHeaders @"created"
-      { id: 999, name: body.name, email: body.email, role: body.role }
+createUserHandler = handle do
+  { body } <- ask
+  when (body.name == "") do
+    reject { badRequest: { error: "Name cannot be empty" } }
+  respond { created: { id: 999, name: body.name, email: body.email, role: body.role } }
 
 -- GET /openapi - Serve OpenAPI spec
 type OpenAPIRoute = Route GET
@@ -177,21 +169,24 @@ type AllApiRoutes =
       CreateUserRoute
 
 openapiHandler :: Handler OpenAPIRoute
-openapiHandler = mkHandler \_ ->
-  pure $ respondNoHeaders @"ok" $ writeJSON $
-    buildOpenAPISpec' @AllApiRoutes
-      { title: "Example API"
-      , version: "1.0.0"
-      }
-      { servers: Just
-          [ { url: "http://localhost:3000"
-            , description: Just "Local development server"
+openapiHandler = handle do
+  respond
+    { ok:
+        writeJSON $
+          buildOpenAPISpec' @AllApiRoutes
+            { title: "Example API"
+            , version: "1.0.0"
             }
-          , { url: "https://api.example.com"
-            , description: Just "Production server"
+            { servers: Just
+                [ { url: "http://localhost:3000"
+                  , description: Just "Local development server"
+                  }
+                , { url: "https://api.example.com"
+                  , description: Just "Production server"
+                  }
+                ]
             }
-          ]
-      }
+    }
 
 --------------------------------------------------------------------------------
 -- Server Setup
@@ -203,9 +198,8 @@ createServer = do
 
   -- Register API routes
   handleRoute healthHandler fastify
-  -- handleRoute userHandler fastify
+  handleRoute userHandler fastify
   handleRoute usersWithLimitHandler fastify
-  handleRoute userHandlerOm fastify
   handleRoute createUserHandler fastify
 
   -- Register OpenAPI spec endpoint
