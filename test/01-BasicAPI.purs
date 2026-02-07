@@ -19,6 +19,7 @@ import Foreign.Object as FObject
 import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
+import Yoga.Fastify.Om.API (registerAPI)
 import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respond, reject, buildOpenAPISpec', class HeaderValueType, BearerToken, Enum, class RenderJSONSchema, class HasEnum, enum)
 import Yoga.HTTP.API.Path (class ParseParam, parseParam, type (/), type (:), type (:?))
 import Yoga.JSON (class ReadForeign, class WriteForeign, writeJSON)
@@ -92,9 +93,16 @@ type UserRoute = Route GET
 userHandler :: Handler UserRoute
 userHandler = handle do
   { path } <- ask
+
   when (path.id /= UserId 1) do
-    reject @"notFound" { error: "User not found" }
-  respond @"ok" { id: UserId 1, name: "Alice", email: "alice@example.com", role: Admin }
+    reject @404 { error: "User not found" }
+
+  respond @200
+    { id: UserId 1
+    , name: "Alice"
+    , email: "alice@example.com"
+    , role: Admin
+    }
 
 -- GET /users?limit=10
 type UsersWithLimitRoute = Route GET
@@ -131,8 +139,13 @@ createUserHandler :: Handler CreateUserRoute
 createUserHandler = handle do
   { body } <- ask
   when (body.name == "") do
-    reject @"badRequest" { error: "Name cannot be empty" }
-  respond @"created" { id: UserId 999, name: body.name, email: body.email, role: body.role }
+    reject @400 { error: "Name cannot be empty" }
+  respond @201
+    { id: UserId 999
+    , name: body.name
+    , email: body.email
+    , role: body.role
+    }
 
 -- GET /openapi - Serve OpenAPI spec
 type OpenAPIRoute = Route GET
@@ -143,11 +156,11 @@ type OpenAPIRoute = Route GET
 
 -- Define all API routes for OpenAPI generation
 type AllApiRoutes =
-  HealthRoute
-    /\ UserRoute
-    /\ UsersWithLimitRoute
-    /\
-      CreateUserRoute
+  { health :: HealthRoute
+  , user :: UserRoute
+  , usersWithLimit :: UsersWithLimitRoute
+  , createUser :: CreateUserRoute
+  }
 
 openapiHandler :: Handler OpenAPIRoute
 openapiHandler = handle do
@@ -175,13 +188,14 @@ createServer = do
   fastify <- F.fastify {}
 
   -- Register API routes
-  handleRoute healthHandler fastify
-  handleRoute userHandler fastify
-  handleRoute usersWithLimitHandler fastify
-  handleRoute createUserHandler fastify
-
-  -- Register OpenAPI spec endpoint
-  handleRoute openapiHandler fastify
+  registerAPI
+    { health: healthHandler
+    , user: userHandler
+    , usersWithLimit: usersWithLimitHandler
+    , createUser: createUserHandler
+    , openapi: openapiHandler
+    }
+    fastify
 
   pure fastify
 

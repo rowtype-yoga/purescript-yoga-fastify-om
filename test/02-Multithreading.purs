@@ -67,11 +67,12 @@ type HashBatchRoute = Route POST
   )
 
 type API =
-  HealthRoute
-    /\ FibRoute
-    /\ FibBatchRoute
-    /\ HashRoute
-    /\ HashBatchRoute
+  { health :: HealthRoute
+  , fib :: FibRoute
+  , fibBatch :: FibBatchRoute
+  , hash :: HashRoute
+  , hashBatch :: HashBatchRoute
+  }
 
 -- Handlers
 

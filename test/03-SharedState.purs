@@ -39,7 +39,10 @@ type CountRoute = Route GET
   ( ok :: { body :: { totalProcessed :: Int } }
   )
 
-type API = FibRoute /\ CountRoute
+type API =
+  { fib :: FibRoute
+  , count :: CountRoute
+  }
 
 -- Handlers
 

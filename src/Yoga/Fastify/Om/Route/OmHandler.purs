@@ -2,12 +2,11 @@ module Yoga.Fastify.Om.Route.OmHandler
   ( handle
   , respond
   , respondWith
-  , reply
-  , replyWith
   , respondNoContent
   , respondNotModified
   , reject
   , rejectWith
+  , class ToLabel
   , class Is2xxStatus
   , class SplitResponse
   , class SplitResponseRL
@@ -34,6 +33,17 @@ import Yoga.HTTP.API.Route.Response (Response(..))
 import Yoga.HTTP.API.Route.StatusCode (class StatusCodeToLabel)
 import Yoga.HTTP.API.Route.RouteHandler (Handler, class RouteHandler, mkHandler)
 import Yoga.Om (Om, handleErrors', runOm)
+
+-- | Convert either a status code (Int) or label (Symbol) to a label (Symbol).
+-- | This allows functions to accept both @404 and @"notFound" polymorphically.
+class ToLabel :: Type -> Symbol -> Constraint
+class ToLabel labelOrCode label | labelOrCode -> label
+
+-- Int codes map to their label via StatusCodeToLabel
+instance toLabelInt :: StatusCodeToLabel code label => ToLabel (Proxy code) label
+
+-- Symbols map to themselves
+else instance toLabelSymbol :: ToLabel (Proxy label) label
 
 -- | Determine whether a variant label corresponds to a 2xx HTTP status code.
 class Is2xxStatus (label :: Symbol) (is2xx :: Boolean) | label -> is2xx
@@ -125,72 +135,41 @@ instance
     handler :: ty -> Om ctx () (Variant respVariant)
     handler val = pure (Variant.inj (Proxy :: Proxy label) val)
 
--- | Return a response with a specific reason label
+-- | Return a response with a specific reason label or status code
 -- |
 -- | Example:
 -- | ```purescript
 -- | respond @"ok" { id: 1, name: "Alice" }
+-- | respond @200 { id: 1, name: "Alice" }
 -- | respond @"created" newUser
--- | respond @"noContent" unit
+-- | respond @201 newUser
 -- | ```
 respond
-  :: forall @label body r1 r2 ctx err
-   . IsSymbol label
+  :: forall @labelOrCode label body r1 r2 ctx err
+   . ToLabel (Proxy labelOrCode) label
+  => IsSymbol label
   => Row.Cons label (Response () body) r1 r2
   => body
   -> Om ctx err (Variant r2)
 respond body =
   pure (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body }))
 
--- | Return a response with a specific reason label and custom headers
+-- | Return a response with a specific reason label or status code and custom headers
 -- |
 -- | Example:
 -- | ```purescript
 -- | respondWith @"created" { "Location": "/users/123" } user
+-- | respondWith @201 { "Location": "/users/123" } user
 -- | ```
 respondWith
-  :: forall @label headers body r1 r2 ctx err
-   . IsSymbol label
+  :: forall @labelOrCode label headers body r1 r2 ctx err
+   . ToLabel (Proxy labelOrCode) label
+  => IsSymbol label
   => Row.Cons label (Response headers body) r1 r2
   => Record headers
   -> body
   -> Om ctx err (Variant r2)
 respondWith headers body =
-  pure (Variant.inj (Proxy :: Proxy label) (Response { headers, body }))
-
--- | Return a response by HTTP status code
--- |
--- | Example:
--- | ```purescript
--- | reply @200 { id: 1, name: "Alice" }
--- | reply @201 newUser
--- | reply @404 { error: "Not found" }
--- | ```
-reply
-  :: forall @code label body r1 r2 ctx err
-   . StatusCodeToLabel code label
-  => IsSymbol label
-  => Row.Cons label (Response () body) r1 r2
-  => body
-  -> Om ctx err (Variant r2)
-reply body =
-  pure (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body }))
-
--- | Return a response by HTTP status code with custom headers
--- |
--- | Example:
--- | ```purescript
--- | replyWith @201 { "Location": "/users/123" } newUser
--- | ```
-replyWith
-  :: forall @code label headers body r1 r2 ctx err
-   . StatusCodeToLabel code label
-  => IsSymbol label
-  => Row.Cons label (Response headers body) r1 r2
-  => Record headers
-  -> body
-  -> Om ctx err (Variant r2)
-replyWith headers body =
   pure (Variant.inj (Proxy :: Proxy label) (Response { headers, body }))
 
 -- | Return a 204 No Content response (no headers, no body).
@@ -226,11 +205,14 @@ respondNotModified =
 -- | Example:
 -- | ```purescript
 -- | reject @"notFound" { error: "User not found" }
+-- | reject @404 { error: "User not found" }
 -- | reject @"badRequest" { error: "Invalid input" }
+-- | reject @400 { error: "Invalid input" }
 -- | ```
 reject
-  :: forall @label body _r1 err _r2 ctx a
-   . IsSymbol label
+  :: forall @labelOrCode label body _r1 err _r2 ctx a
+   . ToLabel (Proxy labelOrCode) label
+  => IsSymbol label
   => Row.Cons label (Response () body) _r1 err
   => Row.Cons label (Response () body) _r2 (exception :: Error | err)
   => body
@@ -243,10 +225,12 @@ reject body =
 -- | Example:
 -- | ```purescript
 -- | rejectWith @"unauthorized" { "WWW-Authenticate": "Bearer" } { error: "Invalid token" }
+-- | rejectWith @401 { "WWW-Authenticate": "Bearer" } { error: "Invalid token" }
 -- | ```
 rejectWith
-  :: forall @label headers body _r1 err _r2 ctx a
-   . IsSymbol label
+  :: forall @labelOrCode label headers body _r1 err _r2 ctx a
+   . ToLabel (Proxy labelOrCode) label
+  => IsSymbol label
   => Row.Cons label (Response headers body) _r1 err
   => Row.Cons label (Response headers body) _r2 (exception :: Error | err)
   => Record headers
