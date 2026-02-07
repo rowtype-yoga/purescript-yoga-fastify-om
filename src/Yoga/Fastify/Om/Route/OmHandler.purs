@@ -2,6 +2,8 @@ module Yoga.Fastify.Om.Route.OmHandler
   ( handle
   , respond
   , respondWith
+  , reply
+  , replyWith
   , respondNoContent
   , respondNotModified
   , reject
@@ -29,6 +31,7 @@ import Record.Builder (Builder)
 import Record.Builder as Builder
 import Type.Proxy (Proxy(..))
 import Yoga.HTTP.API.Route.Response (Response(..))
+import Yoga.HTTP.API.Route.StatusCode (class StatusCodeToLabel)
 import Yoga.HTTP.API.Route.RouteHandler (Handler, class RouteHandler, mkHandler)
 import Yoga.Om (Om, handleErrors', runOm)
 
@@ -153,6 +156,41 @@ respondWith
   -> body
   -> Om ctx err (Variant r2)
 respondWith headers body =
+  pure (Variant.inj (Proxy :: Proxy label) (Response { headers, body }))
+
+-- | Return a response by HTTP status code
+-- |
+-- | Example:
+-- | ```purescript
+-- | reply @200 { id: 1, name: "Alice" }
+-- | reply @201 newUser
+-- | reply @404 { error: "Not found" }
+-- | ```
+reply
+  :: forall @code label body r1 r2 ctx err
+   . StatusCodeToLabel code label
+  => IsSymbol label
+  => Row.Cons label (Response () body) r1 r2
+  => body
+  -> Om ctx err (Variant r2)
+reply body =
+  pure (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body }))
+
+-- | Return a response by HTTP status code with custom headers
+-- |
+-- | Example:
+-- | ```purescript
+-- | replyWith @201 { "Location": "/users/123" } newUser
+-- | ```
+replyWith
+  :: forall @code label headers body r1 r2 ctx err
+   . StatusCodeToLabel code label
+  => IsSymbol label
+  => Row.Cons label (Response headers body) r1 r2
+  => Record headers
+  -> body
+  -> Om ctx err (Variant r2)
+replyWith headers body =
   pure (Variant.inj (Proxy :: Proxy label) (Response { headers, body }))
 
 -- | Return a 204 No Content response (no headers, no body).
