@@ -1,4 +1,4 @@
-module Test.HandleRoute where
+module Test.RequestParsing where
 
 import Prelude
 

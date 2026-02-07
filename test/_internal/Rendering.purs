@@ -1,4 +1,4 @@
-module Test.Rendering where
+module Test.Internal.Rendering where
 
 import Prelude
 

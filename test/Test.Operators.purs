@@ -3,33 +3,30 @@ module Test.Operators where
 import Prelude
 import Effect (Effect)
 import ViTest (ViTest, viTest)
-import Test.Rendering as Rendering
 import Test.Parsing as Parsing
-import Test.HandleRoute as HandleRoute
+import Test.RequestParsing as RequestParsing
 import Test.Headers as Headers
 import Test.RequestBody as RequestBody
 import Test.Responses as Responses
 import Test.Validation as Validation
 import Test.Integration as Integration
+import Test.Internal.Rendering as Rendering
 
 spec :: Effect ViTest
 spec = do
-  -- 1. Basic Building Blocks
-  _ <- Rendering.testRendering
+  -- 1. Path Parsing (Captures & Segments)
   _ <- Parsing.testSegmentParsing
   _ <- Parsing.testCaptureParsing
-
-  -- 2. Path Parsing
   _ <- Parsing.testPathParsing
   _ <- Parsing.testErrorCases
-  _ <- HandleRoute.testParsePathParams
+  _ <- RequestParsing.testParsePathParams
 
-  -- 3. Query Parameters
+  -- 2. Query Parameters
   _ <- Parsing.testOptionalQueryParams
   _ <- Parsing.testRequiredQueryParams
-  _ <- HandleRoute.testParseQueryParams
+  _ <- RequestParsing.testParseQueryParams
 
-  -- 4. Headers
+  -- 3. Headers (Including Auth)
   _ <- Headers.testHeaderValueString
   _ <- Headers.testHeaderValueInt
   _ <- Headers.testHeaderValueMaybe
@@ -37,11 +34,11 @@ spec = do
   _ <- Headers.testBearerToken
   _ <- Headers.testParseHeaders
 
-  -- 5. Request Bodies
-  _ <- HandleRoute.testParseBody
+  -- 4. Request Bodies
+  _ <- RequestParsing.testParseBody
   _ <- RequestBody.testRequestBodyToStrom
 
-  -- 6. Responses
+  -- 5. Responses (Status Codes & Variants)
   _ <- Responses.testStatusCodeMapping
   _ <- Responses.testStatusCodeToString
   _ <- Responses.testRespondNoHeaders
@@ -49,7 +46,7 @@ spec = do
   _ <- Responses.testRespond
   _ <- Responses.testVariantPatternMatching
 
-  -- 7. Validation
+  -- 6. Validation (Min/Max, Patterns)
   _ <- Validation.testPatternValidation
   _ <- Validation.testMinLengthValidation
   _ <- Validation.testMaxLengthValidation
@@ -57,7 +54,11 @@ spec = do
   _ <- Validation.testMaximumValidation
   _ <- Validation.testComposedValidation
 
-  -- 8. OpenAPI Generation
+  -- 7. Full Server Integration
+  _ <- Integration.testServerCompilation
+
+  -- Internal: OpenAPI Generation
+  _ <- Rendering.testRendering
   _ <- Headers.testRenderMethod
   _ <- Headers.testRenderHeadersSchema
   _ <- Headers.testRenderResponseHeadersSchema
@@ -68,10 +69,7 @@ spec = do
   _ <- Headers.testToOpenAPI
   _ <- Responses.testSimpleVariantOpenAPI
   _ <- Responses.testComplexVariantOpenAPI
-  _ <- Responses.testVariantWithHeaders
-
-  -- 9. Full Server Integration
-  Integration.testServerCompilation
+  Responses.testVariantWithHeaders
 
 main :: ViTest
 main = viTest spec
