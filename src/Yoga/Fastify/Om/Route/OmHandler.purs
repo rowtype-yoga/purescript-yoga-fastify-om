@@ -122,14 +122,13 @@ instance
     handler :: ty -> Om ctx () (Variant respVariant)
     handler val = pure (Variant.inj (Proxy :: Proxy label) val)
 
--- | Return a response with a specific label (reason or status code)
+-- | Return a response with a specific reason label
 -- |
 -- | Example:
 -- | ```purescript
 -- | respond @"ok" { id: 1, name: "Alice" }
--- | respond @200 { id: 1, name: "Alice" }
 -- | respond @"created" newUser
--- | respond @201 newUser
+-- | respond @"noContent" unit
 -- | ```
 respond
   :: forall @label body r1 r2 ctx err
