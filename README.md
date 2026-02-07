@@ -14,22 +14,24 @@ Type-safe HTTP routing for Fastify with Om effect management.
 
 ## Learning by Example
 
-See [`test/Test.Operators.purs`](test/Test.Operators.purs) for a comprehensive test suite that progresses from simple to complex:
+### Complete Working Examples
 
-1. **Basic Building Blocks** - Path rendering, segments, captures
-2. **Path Parsing** - Type-safe path parameter extraction
-3. **Query Parameters** - Optional and required query params
-4. **Headers** - Type-safe header parsing including bearer tokens
-5. **Request Bodies** - JSON, FormData, streaming bodies
-6. **Responses** - Variant-based responses with multiple status codes
-7. **Validation** - Built-in validators for strings and numbers
-8. **OpenAPI Generation** - Automatic API documentation
-9. **Full Server Integration** - Complete working examples
+Start with these complete, runnable servers:
 
-For full working servers, see:
-- [`test/Server.Example.purs`](test/Server.Example.purs) - Standard REST API
-- [`test/MultiThreadedServer.Example.purs`](test/MultiThreadedServer.Example.purs) - CPU-intensive work with worker threads
-- [`test/SharedCounterServer.Example.purs`](test/SharedCounterServer.Example.purs) - Shared state across workers
+- [`test/07-Integration-BasicAPI.purs`](test/07-Integration-BasicAPI.purs) - REST API with auth, validation, and OpenAPI
+- [`test/08-Integration-Multithreading.purs`](test/08-Integration-Multithreading.purs) - CPU-intensive work with worker threads
+- [`test/09-Integration-SharedState.purs`](test/09-Integration-SharedState.purs) - Shared state across workers
+
+### Feature Tests
+
+See [`test/Test.Operators.purs`](test/Test.Operators.purs) for detailed tests of individual features:
+
+1. **Path Parsing** - Captures, segments, type-safe parameter extraction
+2. **Query Parameters** - Optional and required params
+3. **Headers** - Type-safe headers including bearer token auth
+4. **Request Bodies** - JSON, FormData, streaming
+5. **Responses** - Variant-based responses with multiple status codes
+6. **Validation** - Min/max length, min/max value, pattern matching
 
 ## Quick Start
 

@@ -1,4 +1,4 @@
-module Test.MultiThreadedServer.Example where
+module Test.Integration.Multithreading where
 
 import Prelude
 

@@ -9,7 +9,6 @@ import Test.Headers as Headers
 import Test.RequestBody as RequestBody
 import Test.Responses as Responses
 import Test.Validation as Validation
-import Test.Integration as Integration
 import Test.Internal.Rendering as Rendering
 
 spec :: Effect ViTest
@@ -53,9 +52,6 @@ spec = do
   _ <- Validation.testMinimumValidation
   _ <- Validation.testMaximumValidation
   _ <- Validation.testComposedValidation
-
-  -- 7. Full Server Integration
-  _ <- Integration.testServerCompilation
 
   -- Internal: OpenAPI Generation
   _ <- Rendering.testRendering

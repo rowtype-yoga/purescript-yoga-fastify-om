@@ -1,4 +1,4 @@
-module Test.SharedCounterServer.Example where
+module Test.Integration.SharedState where
 
 import Prelude
 
