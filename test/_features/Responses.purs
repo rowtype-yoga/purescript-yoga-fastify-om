@@ -10,7 +10,8 @@ import Effect.Aff (Aff)
 import Type.Proxy (Proxy(..))
 import Yoga.HTTP.API.Route.StatusCode (StatusCode(..))
 import Yoga.HTTP.API.Path (Root)
-import Yoga.Fastify.Om.Route (GET, POST, PUT, Route, Request, Response(..), respondNoHeaders, respondWith, toOpenAPI, statusCodeFor, statusCodeToString)
+import Yoga.Fastify.Om.Route (GET, POST, PUT, Route, Request, Response(..), respondNoHeaders, toOpenAPI, statusCodeFor, statusCodeToString)
+import Yoga.HTTP.API.Route.Response (respondWith) as Response
 import Yoga.HTTP.API.Route.Response (respond) as Response
 import ViTest (ViTest, describe, test)
 import ViTest.Expect (expectToBe)
@@ -171,7 +172,7 @@ testRespondWith = describe "respondWith" $ do
   _ <- test "constructs response with headers and body" do
     let
       response :: Variant (created :: Response ("Location" :: String) User)
-      response = respondWith (Proxy :: _ "created")
+      response = Response.respondWith (Proxy :: _ "created")
         { "Location": "/users/123" }
         { id: 123, name: "Alice" }
       result = Variant.match
@@ -183,7 +184,7 @@ testRespondWith = describe "respondWith" $ do
   _ <- test "includes headers in response" do
     let
       response :: Variant (created :: Response ("Location" :: String) User)
-      response = respondWith (Proxy :: _ "created")
+      response = Response.respondWith (Proxy :: _ "created")
         { "Location": "/users/456" }
         { id: 456, name: "Bob" }
       result = Variant.match
@@ -195,7 +196,7 @@ testRespondWith = describe "respondWith" $ do
   test "constructs response with multiple headers" do
     let
       response :: Variant (ok :: Response ("X-Request-Id" :: String, "X-Version" :: String) String)
-      response = respondWith (Proxy :: _ "ok")
+      response = Response.respondWith (Proxy :: _ "ok")
         { "X-Request-Id": "req-123"
         , "X-Version": "v1"
         }

@@ -68,6 +68,10 @@ derive newtype instance Eq UserId
 derive newtype instance WriteForeign UserId
 derive newtype instance ReadForeign UserId
 
+instance RenderJSONSchema UserId where
+  renderJSONSchema _ = unsafeToForeign $ FObject.fromFoldable
+    [ Tuple "type" (unsafeToForeign "integer") ]
+
 instance ParseParam UserId where
   parseParam s = parseParam s >>= \n ->
     if n > 0 then Right (UserId n)
@@ -128,7 +132,7 @@ createUserHandler = handle do
   { body } <- ask
   when (body.name == "") do
     reject @"badRequest" { error: "Name cannot be empty" }
-  respond @"created" { id: 999, name: body.name, email: body.email, role: body.role }
+  respond @"created" { id: UserId 999, name: body.name, email: body.email, role: body.role }
 
 -- GET /openapi - Serve OpenAPI spec
 type OpenAPIRoute = Route GET
