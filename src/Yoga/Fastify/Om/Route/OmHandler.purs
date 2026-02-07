@@ -1,6 +1,6 @@
 module Yoga.Fastify.Om.Route.OmHandler
   ( handle
-  , respondReason
+  , respond
   , respondWith
   , respondNoContent
   , respondNotModified
@@ -122,20 +122,22 @@ instance
     handler :: ty -> Om ctx () (Variant respVariant)
     handler val = pure (Variant.inj (Proxy :: Proxy label) val)
 
--- | Return a response with a specific reason label (e.g., "ok", "created")
+-- | Return a response with a specific label (reason or status code)
 -- |
 -- | Example:
 -- | ```purescript
--- | respondReason @"ok" { id: 1, name: "Alice" }
--- | respondReason @"created" newUser
+-- | respond @"ok" { id: 1, name: "Alice" }
+-- | respond @200 { id: 1, name: "Alice" }
+-- | respond @"created" newUser
+-- | respond @201 newUser
 -- | ```
-respondReason
+respond
   :: forall @label body r1 r2 ctx err
    . IsSymbol label
   => Row.Cons label (Response () body) r1 r2
   => body
   -> Om ctx err (Variant r2)
-respondReason body =
+respond body =
   pure (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body }))
 
 -- | Return a response with a specific reason label and custom headers

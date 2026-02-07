@@ -19,7 +19,7 @@ import Foreign.Object as FObject
 import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
-import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respondReason, reject, buildOpenAPISpec', class HeaderValueType, BearerToken, Enum, class RenderJSONSchema, class HasEnum, enum)
+import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respond, reject, buildOpenAPISpec', class HeaderValueType, BearerToken, Enum, class RenderJSONSchema, class HasEnum, enum)
 import Yoga.HTTP.API.Path (class ParseParam, parseParam, type (/), type (:), type (:?))
 import Yoga.JSON (class ReadForeign, class WriteForeign, writeJSON)
 import Yoga.JSON.Generics (genericWriteForeignEnum, genericReadForeignEnum)
@@ -59,7 +59,7 @@ type HealthRoute = Route GET "health"
 
 healthHandler :: Handler HealthRoute
 healthHandler = handle do
-  respondReason @"ok" { status: "healthy" }
+  respond @"ok" { status: "healthy" }
 
 newtype UserId = UserId Int
 
@@ -90,7 +90,7 @@ userHandler = handle do
   { path } <- ask
   when (path.id /= UserId 1) do
     reject @"notFound" { error: "User not found" }
-  respondReason @"ok" { id: UserId 1, name: "Alice", email: "alice@example.com", role: Admin }
+  respond @"ok" { id: UserId 1, name: "Alice", email: "alice@example.com", role: Admin }
 
 -- GET /users?limit=10
 type UsersWithLimitRoute = Route GET
@@ -102,7 +102,7 @@ type UsersWithLimitRoute = Route GET
 usersWithLimitHandler :: Handler UsersWithLimitRoute
 usersWithLimitHandler = handle do
   { query } <- ask
-  respondReason @"ok"
+  respond @"ok"
     { users:
         [ { id: UserId 1, name: "Alice", email: "alice@example.com", role: Admin }
         , { id: UserId 2, name: "Bob", email: "bob@example.com", role: Member }
@@ -128,7 +128,7 @@ createUserHandler = handle do
   { body } <- ask
   when (body.name == "") do
     reject @"badRequest" { error: "Name cannot be empty" }
-  respondReason @"created" { id: 999, name: body.name, email: body.email, role: body.role }
+  respond @"created" { id: 999, name: body.name, email: body.email, role: body.role }
 
 -- GET /openapi - Serve OpenAPI spec
 type OpenAPIRoute = Route GET
@@ -147,7 +147,7 @@ type AllApiRoutes =
 
 openapiHandler :: Handler OpenAPIRoute
 openapiHandler = handle do
-  respondReason @"ok"
+  respond @"ok"
     $ writeJSON
     $
       buildOpenAPISpec' @AllApiRoutes

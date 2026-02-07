@@ -18,7 +18,7 @@ import Node.WorkerBees.Aff.Pool as Pool
 import Yoga.Fastify.Fastify (Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.HTTP.API.Path (type (/), type (:))
-import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respondReason, reject)
+import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respond, reject)
 import Yoga.Om as Om
 import Yoga.Om.WorkerBees (WorkerPool)
 
@@ -77,7 +77,7 @@ type API =
 
 healthHandler :: Handler HealthRoute
 healthHandler = handle do
-  respondReason @"ok" { status: "ok" }
+  respond @"ok" { status: "ok" }
 
 fibHandler :: WorkerPool FibInput FibOutput -> Handler FibRoute
 fibHandler pool = handle do
@@ -88,7 +88,7 @@ fibHandler pool = handle do
   when (n > 40) do
     reject @"badRequest" { error: "n must be <= 40" }
   result <- Om.fromAff $ Pool.invoke pool { n }
-  respondReason @"ok" { n, result: result.result }
+  respond @"ok" { n, result: result.result }
 
 fibBatchHandler :: WorkerPool FibInput FibOutput -> Handler FibBatchRoute
 fibBatchHandler pool = handle do
@@ -103,7 +103,7 @@ fibBatchHandler pool = handle do
   let inputs = numbers <#> \n -> { n }
   outputs <- Om.fromAff $ parTraverse (Pool.invoke pool) inputs
   let results = Array.zipWith (\n output -> { n, result: output.result }) numbers outputs
-  respondReason @"ok" { results }
+  respond @"ok" { results }
 
 hashHandler :: WorkerPool HashInput HashOutput -> Handler HashRoute
 hashHandler pool = handle do
@@ -113,7 +113,7 @@ hashHandler pool = handle do
   when (body.iterations > 1000) do
     reject @"badRequest" { error: "iterations must be <= 1000" }
   result <- Om.fromAff $ Pool.invoke pool { text: body.text, iterations: body.iterations }
-  respondReason @"ok" result
+  respond @"ok" result
 
 hashBatchHandler :: WorkerPool HashInput HashOutput -> Handler HashBatchRoute
 hashBatchHandler pool = handle do
@@ -126,7 +126,7 @@ hashBatchHandler pool = handle do
   when (Array.length inputs > 50) do
     reject @"badRequest" { error: "maximum 50 hashes per batch" }
   results <- Om.fromAff $ parTraverse (Pool.invoke pool) inputs
-  respondReason @"ok" { results }
+  respond @"ok" { results }
 
 -- Server Setup
 

@@ -15,7 +15,7 @@ import Node.WorkerBees.Aff.Pool as Pool
 import Yoga.Fastify.Fastify (Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.HTTP.API.Path (type (/), type (:))
-import Yoga.Fastify.Om.Route (GET, Route, Request, Handler, handleRoute, handle, respondReason, reject)
+import Yoga.Fastify.Om.Route (GET, Route, Request, Handler, handleRoute, handle, respond, reject)
 import Yoga.Om as Om
 import Yoga.Om.WorkerBees.SharedInt as SharedInt
 
@@ -52,12 +52,12 @@ fibHandler pool = handle do
   when (n > 40) do
     reject @"badRequest" { error: "n must be <= 40" }
   output <- Om.fromAff $ Pool.invoke pool { n }
-  respondReason @"ok" { n, result: output.result, totalProcessed: output.count }
+  respond @"ok" { n, result: output.result, totalProcessed: output.count }
 
 countHandler :: SharedInt.SharedInt -> Handler CountRoute
 countHandler counter = handle do
   totalProcessed <- Om.fromAff $ liftEffect $ SharedInt.read counter
-  respondReason @"ok" { totalProcessed }
+  respond @"ok" { totalProcessed }
 
 -- Server
 
