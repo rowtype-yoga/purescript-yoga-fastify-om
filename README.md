@@ -12,26 +12,17 @@ Type-safe HTTP routing for Fastify with Om effect management.
 - Multi-threading support via WorkerBees
 - Shared memory primitives (SharedInt, SharedState)
 
-## Learning by Example
+## Documentation by Example
 
-### Complete Working Examples
+The test directory contains complete, runnable examples that serve as documentation:
 
-Start with these complete, runnable servers:
+### Examples (Complete Servers)
 
-- [`test/07-Integration-BasicAPI.purs`](test/07-Integration-BasicAPI.purs) - REST API with auth, validation, and OpenAPI
-- [`test/08-Integration-Multithreading.purs`](test/08-Integration-Multithreading.purs) - CPU-intensive work with worker threads
-- [`test/09-Integration-SharedState.purs`](test/09-Integration-SharedState.purs) - Shared state across workers
+1. [`test/01-BasicAPI.purs`](test/01-BasicAPI.purs) - REST API with authentication, validation, and OpenAPI generation
+2. [`test/02-Multithreading.purs`](test/02-Multithreading.purs) - CPU-intensive work with worker threads
+3. [`test/03-SharedState.purs`](test/03-SharedState.purs) - Atomic shared state across workers
 
-### Feature Tests
-
-See [`test/Test.Operators.purs`](test/Test.Operators.purs) for detailed tests of individual features:
-
-1. **Path Parsing** - Captures, segments, type-safe parameter extraction
-2. **Query Parameters** - Optional and required params
-3. **Headers** - Type-safe headers including bearer token auth
-4. **Request Bodies** - JSON, FormData, streaming
-5. **Responses** - Variant-based responses with multiple status codes
-6. **Validation** - Min/max length, min/max value, pattern matching
+Each example is a complete, working server demonstrating real-world patterns.
 
 ## Quick Start
 

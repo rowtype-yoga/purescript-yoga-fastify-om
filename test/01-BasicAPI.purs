@@ -1,4 +1,4 @@
-module Test.Integration.BasicAPI where
+module Test.BasicAPI where
 
 import Prelude
 

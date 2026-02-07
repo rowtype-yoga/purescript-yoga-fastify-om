@@ -1,4 +1,4 @@
-module Test.Integration.Multithreading where
+module Test.Multithreading where
 
 import Prelude
 

@@ -1,4 +1,4 @@
-module Test.RequestBody where
+module Test.Features.RequestBody where
 
 import Prelude
 

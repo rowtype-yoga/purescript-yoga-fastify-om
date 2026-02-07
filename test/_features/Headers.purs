@@ -1,4 +1,4 @@
-module Test.Headers where
+module Test.Features.Headers where
 
 import Prelude
 

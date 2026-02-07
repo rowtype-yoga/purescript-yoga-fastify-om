@@ -1,4 +1,4 @@
-module Test.Responses where
+module Test.Features.Responses where
 
 import Prelude
 

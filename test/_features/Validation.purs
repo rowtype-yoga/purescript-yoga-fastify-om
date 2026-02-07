@@ -1,4 +1,4 @@
-module Test.Validation where
+module Test.Features.Validation where
 
 import Prelude
 

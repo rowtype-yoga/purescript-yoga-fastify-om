@@ -1,4 +1,4 @@
-module Test.Parsing where
+module Test.Features.Parsing where
 
 import Prelude
 

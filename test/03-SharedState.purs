@@ -1,4 +1,4 @@
-module Test.Integration.SharedState where
+module Test.SharedState where
 
 import Prelude
 

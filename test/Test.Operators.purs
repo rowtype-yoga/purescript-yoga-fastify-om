@@ -3,12 +3,12 @@ module Test.Operators where
 import Prelude
 import Effect (Effect)
 import ViTest (ViTest, viTest)
-import Test.Parsing as Parsing
-import Test.RequestParsing as RequestParsing
-import Test.Headers as Headers
-import Test.RequestBody as RequestBody
-import Test.Responses as Responses
-import Test.Validation as Validation
+import Test.Features.Parsing as Parsing
+import Test.Features.RequestParsing as RequestParsing
+import Test.Features.Headers as Headers
+import Test.Features.RequestBody as RequestBody
+import Test.Features.Responses as Responses
+import Test.Features.Validation as Validation
 import Test.Internal.Rendering as Rendering
 
 spec :: Effect ViTest
