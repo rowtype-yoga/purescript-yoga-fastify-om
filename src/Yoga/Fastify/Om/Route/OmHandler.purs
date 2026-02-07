@@ -32,14 +32,9 @@ import Record as Record
 import Record.Builder (Builder)
 import Record.Builder as Builder
 import Type.Proxy (Proxy(..))
-import Unsafe.Coerce (unsafeCoerce)
 import Yoga.HTTP.API.Route.Response (Response(..))
 import Yoga.HTTP.API.Route.RouteHandler (Handler, class RouteHandler, mkHandler)
 import Yoga.Om (Om, handleErrors', runOm)
-
---------------------------------------------------------------------------------
--- Is2xxStatus: Map status labels to type-level Boolean
---------------------------------------------------------------------------------
 
 -- | Determine whether a variant label corresponds to a 2xx HTTP status code.
 class Is2xxStatus (label :: Symbol) (is2xx :: Boolean) | label -> is2xx
@@ -49,10 +44,6 @@ else instance Is2xxStatus "created" True
 else instance Is2xxStatus "accepted" True
 else instance Is2xxStatus "noContent" True
 else instance Is2xxStatus label False
-
---------------------------------------------------------------------------------
--- SplitResponse: Split response row into success (2xx) / error (non-2xx)
---------------------------------------------------------------------------------
 
 -- | Split a response variant row into success (2xx) and error (non-2xx) sub-rows.
 class
@@ -104,10 +95,6 @@ instance
   ) =>
   SplitResponseEntry False label ty tail successRow errorRow
 
---------------------------------------------------------------------------------
--- BuildErrorHandlers: Build onMatch record from error RowList
---------------------------------------------------------------------------------
-
 -- | Build a record of handlers for `Variant.onMatch` that convert each
 -- | error variant label into the full response variant.
 class
@@ -139,10 +126,6 @@ instance
     handler :: ty -> Om ctx () (Variant respVariant)
     handler val = pure (Variant.inj (Proxy :: Proxy label) val)
 
---------------------------------------------------------------------------------
--- respond / reject: Ergonomic response helpers for Om handlers
---------------------------------------------------------------------------------
-
 -- | Return a 2xx response in an Om handler with no headers.
 -- |
 -- | Example:
@@ -158,11 +141,9 @@ respond
   => Record rec
   -> Om ctx err (Variant r2)
 
-respond rec =
-  let
-    body = Record.get (Proxy :: Proxy label) rec
-  in
-    pure (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body }))
+respond rec = do
+  let body = Record.get (Proxy :: Proxy label) rec
+  pure (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body }))
 
 -- | Return a 2xx response in an Om handler with custom headers.
 -- |
@@ -179,11 +160,9 @@ respondWithHeaders
   => Record rec
   -> Om ctx err (Variant r2)
 
-respondWithHeaders rec =
-  let
-    { headers, body } = Record.get (Proxy :: Proxy label) rec
-  in
-    pure (Variant.inj (Proxy :: Proxy label) (Response { headers, body }))
+respondWithHeaders rec = do
+  let { headers, body } = Record.get (Proxy :: Proxy label) rec
+  pure (Variant.inj (Proxy :: Proxy label) (Response { headers, body }))
 
 -- | Short-circuit an Om handler with a 2xx response (no headers).
 -- |
@@ -199,11 +178,9 @@ respondNow
   => Row.Cons label (Response () body) r1 successRow
   => Record rec
   -> Om ctx (_respondNow :: Variant successRow | err) a
-respondNow rec =
-  let
-    body = Record.get (Proxy :: Proxy label) rec
-  in
-    throwError (Variant.inj (Proxy :: Proxy "_respondNow") (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body })))
+respondNow rec = do
+  let body = Record.get (Proxy :: Proxy label) rec
+  throwError (Variant.inj (Proxy :: Proxy "_respondNow") (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body })))
 
 -- | Short-circuit an Om handler with a 2xx response with custom headers.
 -- |
@@ -219,11 +196,9 @@ respondNowWithHeaders
   => Row.Cons label (Response headers body) r1 successRow
   => Record rec
   -> Om ctx (_respondNow :: Variant successRow | err) a
-respondNowWithHeaders rec =
-  let
-    { headers, body } = Record.get (Proxy :: Proxy label) rec
-  in
-    throwError (Variant.inj (Proxy :: Proxy "_respondNow") (Variant.inj (Proxy :: Proxy label) (Response { headers, body })))
+respondNowWithHeaders rec = do
+  let { headers, body } = Record.get (Proxy :: Proxy label) rec
+  throwError (Variant.inj (Proxy :: Proxy "_respondNow") (Variant.inj (Proxy :: Proxy label) (Response { headers, body })))
 
 -- | Return a 204 No Content response (no headers, no body).
 -- |
@@ -231,12 +206,15 @@ respondNowWithHeaders rec =
 -- | ```purescript
 -- | respondNoContent
 -- | ```
+-- respondNoContent
+--   :: forall r1 r2 ctx err
+--    . Row.Cons "noContent" (Response () Unit) r1 r2
+--   => Om ctx err (Variant r2)
 respondNoContent
-  :: forall r1 r2 ctx err
-   . Row.Cons "noContent" (Response () Unit) r1 r2
-  => Om ctx err (Variant r2)
+  :: forall ctx err r
+   . Om ctx err (Variant (noContent :: Response () Unit | r))
 respondNoContent =
-  pure (unsafeCoerce (Variant.inj (Proxy :: Proxy "noContent") (Response { headers: {}, body: unit })))
+  pure ((Variant.inj (Proxy :: Proxy "noContent") (Response { headers: {}, body: unit })))
 
 -- | Return a 304 Not Modified response (no headers, no body).
 -- |
@@ -245,11 +223,10 @@ respondNoContent =
 -- | respondNotModified
 -- | ```
 respondNotModified
-  :: forall r1 r2 ctx err
-   . Row.Cons "notModified" (Response () Unit) r1 r2
-  => Om ctx err (Variant r2)
+  :: forall ctx err r
+   . Om ctx err (Variant (notModified :: Response () Unit | r))
 respondNotModified =
-  pure (unsafeCoerce (Variant.inj (Proxy :: Proxy "notModified") (Response { headers: {}, body: unit })))
+  pure (Variant.inj (Proxy :: Proxy "notModified") (Response { headers: {}, body: unit }))
 
 -- | Throw a non-2xx response in an Om handler (short-circuits) with no headers.
 -- |
@@ -266,11 +243,9 @@ reject
   => Row.Cons label (Response () body) _r2 (exception :: Error | err)
   => Record rec
   -> Om ctx err a
-reject rec =
-  let
-    body = Record.get (Proxy :: Proxy label) rec
-  in
-    throwError (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body }))
+reject rec = do
+  let body = Record.get (Proxy :: Proxy label) rec
+  throwError (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body }))
 
 -- | Throw a non-2xx response in an Om handler (short-circuits) with custom headers.
 -- |
@@ -287,15 +262,9 @@ rejectWithHeaders
   => Row.Cons label (Response headers body) _r2 (exception :: Error | err)
   => Record rec
   -> Om ctx err a
-rejectWithHeaders rec =
-  let
-    { headers, body } = Record.get (Proxy :: Proxy label) rec
-  in
-    throwError (Variant.inj (Proxy :: Proxy label) (Response { headers, body }))
-
---------------------------------------------------------------------------------
--- handle: Om-based route handler
---------------------------------------------------------------------------------
+rejectWithHeaders rec = do
+  let { headers, body } = Record.get (Proxy :: Proxy label) rec
+  throwError (Variant.inj (Proxy :: Proxy label) (Response { headers, body }))
 
 -- | Create a `Handler` from an Om computation.
 -- |

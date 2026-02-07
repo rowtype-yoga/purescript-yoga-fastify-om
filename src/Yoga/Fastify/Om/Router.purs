@@ -1,9 +1,7 @@
 module Yoga.Fastify.Om.Router
-  ( -- * Router Integration
-    matchRoute
+  ( matchRoute
   , matchRouteUrl
   , getRoute
-  -- * Re-exports from routing-duplex
   , module Routing.Duplex
   , module Routing.Duplex.Generic
   , module Routing.Duplex.Generic.Syntax

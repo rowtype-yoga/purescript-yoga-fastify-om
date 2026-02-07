@@ -10,6 +10,25 @@ workspace:
       path: ../purescript-yoga-http-api
     yoga-om-layer:
       path: ../purescript-yoga-om-layer
+    yoga-om-strom:
+      path: ../purescript-yoga-om-strom
+    yoga-om-workerbees:
+      path: ../purescript-yoga-om-workerbees
+    node-workerbees:
+      git: https://github.com/natefaubion/purescript-node-workerbees.git
+      ref: v0.3.1
+      dependencies:
+        - aff
+        - argonaut-core
+        - effect
+        - either
+        - exceptions
+        - maybe
+        - newtype
+        - parallel
+        - prelude
+        - transformers
+        - unsafe-coerce
     vitest:
       path: ../purescript-vitest
     # vitest:
@@ -44,6 +63,15 @@ package:
     - yoga-json: ">=5.0.0 <6.0.0"
     - yoga-om
     - yoga-om-layer
+    - yoga-om-strom
+    - node-buffer: ">=9.0.0 <10.0.0"
+    - node-fs: ">=9.0.0 <10.0.0"
+    - node-path: ">=5.0.0 <6.0.0"
+    - node-process: ">=11.0.0 <12.0.0"
+    - node-streams: ">=9.0.0 <10.0.0"
+    - parallel: ">=7.0.0 <8.0.0"
+    - node-workerbees
+    - yoga-om-workerbees
   test:
     main: Test.Main
     dependencies:

@@ -5,7 +5,9 @@ import Effect (Effect)
 import ViTest (ViTest, viTest)
 import OperatorTest.Spec as OperatorTest
 import ParserTest.Spec as ParserTest
+import RequestBodyTest.Spec as RequestBodyTest
 import RouteTest.Spec as RouteTest
+import Test.ServerIntegration.Spec as ServerIntegration
 import VariantResponseTest.Spec as VariantResponseTest
 import HandleRouteTest.Spec as HandleRouteTest
 import MetadataValidationTest.Spec as MetadataValidationTest
@@ -13,6 +15,7 @@ import MetadataValidationTest.Spec as MetadataValidationTest
 spec :: Effect ViTest
 spec = do
   _ <- OperatorTest.testRendering
+  _ <- RequestBodyTest.testRequestBodyToStrom
   _ <- ParserTest.testSegmentParsing
   _ <- ParserTest.testCaptureParsing
   _ <- ParserTest.testPathParsing
@@ -50,7 +53,8 @@ spec = do
   _ <- MetadataValidationTest.testMaxLengthValidation
   _ <- MetadataValidationTest.testMinimumValidation
   _ <- MetadataValidationTest.testMaximumValidation
-  MetadataValidationTest.testComposedValidation
+  _ <- MetadataValidationTest.testComposedValidation
+  ServerIntegration.testServerCompilation
 
 main :: ViTest
 main = viTest spec

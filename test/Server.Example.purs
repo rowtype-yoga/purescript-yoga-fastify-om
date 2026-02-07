@@ -1,4 +1,4 @@
-module Example.Server where
+module Test.Server.Example where
 
 import Prelude
 
@@ -8,15 +8,15 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
+import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\))
 import Effect (Effect)
 import Effect.Aff as Aff
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Foreign (Foreign)
+import Foreign (Foreign, unsafeToForeign)
 import Foreign.Object as FObject
 import Type.Proxy (Proxy(..))
-import Unsafe.Coerce (unsafeCoerce)
 import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.HTTP.API.Path (class ParseParam, parseParam, type (/), type (:), type (:?))
@@ -24,9 +24,7 @@ import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRo
 import Yoga.JSON (writeJSON, class WriteForeign, class ReadForeign)
 import Yoga.JSON.Generics (genericWriteForeignEnum, genericReadForeignEnum)
 
---------------------------------------------------------------------------------
 -- Example Types
---------------------------------------------------------------------------------
 
 -- User role enum
 data UserRole = Admin | Member | Guest
@@ -42,16 +40,15 @@ instance ReadForeign UserRole where
   readImpl = genericReadForeignEnum { toConstructorName: identity }
 
 instance RenderJSONSchema UserRole where
-  renderJSONSchema _ =
+  renderJSONSchema _ = do
     let
       enumValues = enum (Proxy :: Proxy (Enum UserRole))
       baseSchema = FObject.fromFoldable
-        [ unsafeCoerce $ { key: "type", value: unsafeCoerce "string" }
+        [ Tuple "type" (unsafeToForeign "string")
         ]
-    in
-      case enumValues of
-        Nothing -> unsafeCoerce baseSchema
-        Just vals -> unsafeCoerce $ FObject.insert "enum" (unsafeCoerce vals) baseSchema
+    case enumValues of
+      Nothing -> unsafeToForeign baseSchema
+      Just vals -> unsafeToForeign $ FObject.insert "enum" (unsafeToForeign vals) baseSchema
 
 type User =
   { id :: Int
@@ -68,9 +65,7 @@ type CreateUserRequest =
 
 type ErrorResponse = { error :: String }
 
---------------------------------------------------------------------------------
 -- Routes
---------------------------------------------------------------------------------
 
 -- GET /health
 type HealthRoute = Route GET "health"
@@ -187,9 +182,7 @@ openapiHandler = handle do
             }
     }
 
---------------------------------------------------------------------------------
 -- Server Setup
---------------------------------------------------------------------------------
 
 createServer :: Effect Fastify
 createServer = do

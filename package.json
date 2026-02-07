@@ -17,9 +17,13 @@
   "type": "module",
   "scripts": {
     "build": "spago build",
+    "build:workers": "bun run test && mkdir -p dist/workers && bun build output/Test.Workers.FibonacciWorker/index.js --target=node --format=esm --outfile=dist/workers/FibonacciWorker.js && bun build output/Test.Workers.HashWorker/index.js --target=node --format=esm --outfile=dist/workers/HashWorker.js && bun build output/Test.Workers.CounterWorker/index.js --target=node --format=esm --outfile=dist/workers/CounterWorker.js",
     "test": "bun run build && bun run vitest run",
     "test:watch": "bun run vitest",
-    "example": "bun run build && bun run example/server.ts"
+    "example": "bun run build && bun run example/server.ts",
+    "example:multithreaded": "bun run build:workers && spago run --main Test.MultiThreadedServer.Example",
+    "example:server": "bun run build && spago run --main Test.Server.Example",
+    "example:sharedcounter": "bun run build:workers && spago run --main Test.SharedCounterServer.Example"
   },
   "devDependencies": {
     "jsdom": "^24.0.0",

@@ -55,13 +55,12 @@ class ParseSegment segment where
 
 -- A literal string segment must match exactly
 instance parseSegmentString :: IsSymbol s => ParseSegment s where
-  matchSegment _ path =
+  matchSegment _ path = do
     let
       segment = reflectSymbol (Proxy :: Proxy s)
       prefix = "/" <> segment
-    in
-      if String.take (String.length prefix) path == prefix then Just (String.drop (String.length prefix) path)
-      else Nothing
+    if String.take (String.length prefix) path == prefix then Just (String.drop (String.length prefix) path)
+    else Nothing
 
 -- Now let's add parsing for captures
 -- A capture should extract the next segment and try to parse it as the given type
@@ -72,7 +71,7 @@ class ParseCapture ty where
 
 -- For Int, parse until the next / or end of string
 instance parseCaptureInt :: ParseCapture Int where
-  parseCapture path =
+  parseCapture path = do
     let
       -- Skip leading /
       path' = if String.take 1 path == "/" then String.drop 1 path else path
@@ -81,22 +80,20 @@ instance parseCaptureInt :: ParseCapture Int where
         Just idx -> String.take idx path'
         Nothing -> path'
       remaining = String.drop (String.length segment) path'
-    in
-      case Int.fromString segment of
-        Just value -> Just { value, remaining }
-        Nothing -> Nothing
+    case Int.fromString segment of
+      Just value -> Just { value, remaining }
+      Nothing -> Nothing
 
 -- For String, just take the next segment
 instance parseCaptureString :: ParseCapture String where
-  parseCapture path =
+  parseCapture path = do
     let
       path' = if String.take 1 path == "/" then String.drop 1 path else path
       segment = case String.indexOf (String.Pattern "/") path' of
         Just idx -> String.take idx path'
         Nothing -> path'
       remaining = String.drop (String.length segment) path'
-    in
-      Just { value: segment, remaining }
+    Just { value: segment, remaining }
 
 -- Test the simple case first
 test1 :: Maybe String
@@ -151,11 +148,9 @@ else instance parsePathSegmentsParam ::
   ParsePathSegments (Param name ty) row where
   parsePathSegments _ path =
     case parseCapture path of
-      Just { value, remaining } ->
-        let
-          captures = Builder.build (Builder.insert (Proxy :: Proxy name) value) {}
-        in
-          Just { captures, remaining }
+      Just { value, remaining } -> do
+        let captures = Builder.build (Builder.insert (Proxy :: Proxy name) value) {}
+        Just { captures, remaining }
       Nothing -> Nothing
 
 -- Base case: a literal string segment (no captures, fallback)
@@ -184,31 +179,27 @@ test6 = parsePathSegments (Proxy :: Proxy TestPath) "/users/hello/posts"
 
 -- Helper to parse query string into key-value pairs
 parseQueryString :: String -> Array { key :: String, value :: String }
-parseQueryString queryString =
+parseQueryString queryString = do
   let
     -- Remove leading "?" if present
     qs = if String.take 1 queryString == "?" then String.drop 1 queryString else queryString
     pairs = String.split (Pattern "&") qs
-  in
-    pairs # Array.mapMaybe \pair ->
-      case String.indexOf (Pattern "=") pair of
-        Just idx ->
-          let
-            key = String.take idx pair
-            value = String.drop (idx + 1) pair
-          in
-            Just { key, value }
-        Nothing -> Nothing
+  pairs # Array.mapMaybe \pair ->
+    case String.indexOf (Pattern "=") pair of
+      Just idx -> do
+        let
+          key = String.take idx pair
+          value = String.drop (idx + 1) pair
+        Just { key, value }
+      Nothing -> Nothing
 
 -- Parse a specific query param by name
 parseQueryParam :: forall ty. ParseCapture ty => String -> String -> Maybe ty
-parseQueryParam queryString paramName =
-  let
-    pairs = parseQueryString queryString
-  in
-    case Array.find (\p -> p.key == paramName) pairs of
-      Just { value } -> map _.value (parseCapture ("/" <> value))
-      Nothing -> Nothing
+parseQueryParam queryString paramName = do
+  let pairs = parseQueryString queryString
+  case Array.find (\p -> p.key == paramName) pairs of
+    Just { value } -> map _.value (parseCapture ("/" <> value))
+    Nothing -> Nothing
 
 -- Build a record of query params (Required becomes plain type, others become Maybe)
 -- Returns Either with missing required params as errors
@@ -234,17 +225,16 @@ instance parseQueryParamsListConsRequired ::
   , Row.Lacks name tailResult
   ) =>
   ParseQueryParamsList (Cons name (Required ty) tail) result where
-  parseQueryParamsList _ queryString =
+  parseQueryParamsList _ queryString = do
     let
       paramName = reflectSymbol (Proxy :: Proxy name)
       value = parseQueryParam queryString paramName
       restResult = parseQueryParamsList (Proxy :: Proxy tail) queryString
-    in
-      case value, restResult of
-        Just v, Right rest -> Right $ Builder.build (Builder.insert (Proxy :: Proxy name) v) rest
-        Nothing, Right _ -> Left [ "Missing required query parameter: " <> paramName ]
-        Just _, Left errs -> Left errs
-        Nothing, Left errs -> Left ([ "Missing required query parameter: " <> paramName ] <> errs)
+    case value, restResult of
+      Just v, Right rest -> Right $ Builder.build (Builder.insert (Proxy :: Proxy name) v) rest
+      Nothing, Right _ -> Left [ "Missing required query parameter: " <> paramName ]
+      Just _, Left errs -> Left errs
+      Nothing, Left errs -> Left ([ "Missing required query parameter: " <> paramName ] <> errs)
 
 -- Optional param: always succeeds with Maybe
 else instance parseQueryParamsListConsOptional ::
@@ -255,15 +245,14 @@ else instance parseQueryParamsListConsOptional ::
   , Row.Lacks name tailResult
   ) =>
   ParseQueryParamsList (Cons name ty tail) result where
-  parseQueryParamsList _ queryString =
+  parseQueryParamsList _ queryString = do
     let
       paramName = reflectSymbol (Proxy :: Proxy name)
       value = parseQueryParam queryString paramName
       restResult = parseQueryParamsList (Proxy :: Proxy tail) queryString
-    in
-      case restResult of
-        Right rest -> Right $ Builder.build (Builder.insert (Proxy :: Proxy name) value) rest
-        Left errs -> Left errs
+    case restResult of
+      Right rest -> Right $ Builder.build (Builder.insert (Proxy :: Proxy name) value) rest
+      Left errs -> Left errs
 
 instance parseQueryParamsImpl ::
   ( RowToList params list
@@ -283,19 +272,18 @@ instance parseFullPathImpl ::
   , ParseQueryParams queryParams queryResult
   ) =>
   ParseFullPath (QueryParams (Path segments) (Record queryParams)) queryParams pathResult queryResult where
-  parseFullPath _ _ input =
+  parseFullPath _ _ input = do
     let
       -- Split on ? to separate path and query
       parts = String.split (Pattern "?") input
       pathPart = Array.head parts # fromMaybe ""
       queryPart = Array.index parts 1 # fromMaybe ""
-    in
-      case parsePathSegments (Proxy :: Proxy segments) pathPart of
-        Just { captures: pathCaptures, remaining: "" } ->
-          case parseQueryParams (Proxy :: Proxy queryParams) queryPart of
-            Right query -> Right { path: pathCaptures, query }
-            Left errs -> Left errs
-        _ -> Left [ "Invalid path: " <> pathPart ]
+    case parsePathSegments (Proxy :: Proxy segments) pathPart of
+      Just { captures: pathCaptures, remaining: "" } ->
+        case parseQueryParams (Proxy :: Proxy queryParams) queryPart of
+          Right query -> Right { path: pathCaptures, query }
+          Left errs -> Left errs
+      _ -> Left [ "Invalid path: " <> pathPart ]
 
 -- Test with optional query params
 type TestPathWithQuery = Path ("users" / "id" : Int / "posts") :? { limit :: Int, offset :: Int }

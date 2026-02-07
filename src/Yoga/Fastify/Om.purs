@@ -1,17 +1,13 @@
 module Yoga.Fastify.Om
-  ( -- * Request-in-Context Types (NEW!)
-    RequestContext
+  ( RequestContext
   , OmHandler
   , OmFastify
-  -- * Om-aware server setup (NEW!)
   , createOmFastify
-  -- * Om-aware route registration with request in context (NEW!)
   , getOm
   , postOm
   , putOm
   , deleteOm
   , patchOm
-  -- * Low-level request data accessors from context (NEW!)
   , httpRequest
   , requestHeaders
   , requestParams
@@ -19,7 +15,6 @@ module Yoga.Fastify.Om
   , requestBody
   , requestMethod
   , requestUrl
-  -- * High-level typed helpers (NEW!)
   , MissingParam
   , ParamErrors
   , MissingHeader
@@ -48,33 +43,12 @@ module Yoga.Fastify.Om
   , queryParam
   , requiredQueryParams
   , optionalQueryParams
-  -- * Legacy Om-friendly server operations (kept for backwards compatibility)
-  , listen
-  , close
-  , get
-  , post
-  , put
-  , delete
-  , patch
-  , route
-  -- * Legacy Om-friendly request operations (kept for backwards compatibility)
-  , body
-  , params
-  , query
-  , headers
-  , method
-  , url
-  -- * Om-friendly reply operations
-  , status
-  , header
-  , send
-  , sendJson
-  -- * Re-exports from base module
   , module Yoga.Fastify.Fastify
   ) where
 
 import Prelude
 
+import Control.Monad.Except (runExcept)
 import Data.Either (Either(..))
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
@@ -85,24 +59,18 @@ import Prim.RowList (class RowToList, RowList)
 import Prim.RowList as RL
 import Record as Record
 import Effect.Aff as Aff
-import Effect.Aff.Class (liftAff)
 import Effect.Class (liftEffect)
 import Effect.Ref (Ref)
 import Effect.Ref as Ref
-import Foreign (Foreign)
 import Foreign.Object (Object)
 import Foreign.Object as Object
-import Prim.Row (class Cons, class Lacks, class Union)
+import Prim.Row (class Cons, class Lacks)
 import Type.Proxy (Proxy(..))
-import Unsafe.Coerce (unsafeCoerce)
 import Yoga.Fastify.Fastify as F
 import Yoga.Fastify.Fastify (Fastify, FastifyRequest, FastifyReply, RouteHandler, Host, Port, HTTPMethod, RouteURL, StatusCode)
+import Yoga.JSON (readImpl)
 import Yoga.Om (Om)
 import Yoga.Om as Om
-
---------------------------------------------------------------------------------
--- REQUEST-IN-CONTEXT TYPES
---------------------------------------------------------------------------------
 
 -- | Request context that gets injected automatically into Om context as `httpRequest` field
 -- | Contains all request data: headers, params, query, body, method, url
@@ -127,10 +95,6 @@ type OmFastify appCtx =
   , contextRef :: Ref { | appCtx }
   }
 
---------------------------------------------------------------------------------
--- OM-AWARE FASTIFY SETUP
---------------------------------------------------------------------------------
-
 -- | Create Om-aware Fastify wrapper that stores application context
 -- |
 -- | Example:
@@ -148,19 +112,13 @@ createOmFastify appContext fastifyApp = do
   contextRef <- Ref.new appContext
   pure { fastify: fastifyApp, contextRef }
 
---------------------------------------------------------------------------------
--- INTERNAL: WRAP OM HANDLER FOR BASE FASTIFY
---------------------------------------------------------------------------------
-
 -- | Internal helper: wraps OmHandler to work with base Fastify RouteHandler
 -- | Extracts request data, inserts as `httpRequest` field, runs Om handler
--- | Uses unsafeCoerce to bypass rigid type variable issues (safe due to Lacks constraint)
 wrapOmHandler
-  :: forall appCtx fullCtx
+  :: forall appCtx
    . Lacks "httpRequest" appCtx
-  => Cons "httpRequest" RequestContext appCtx fullCtx
-  => Ref { | appCtx }
-  -> OmHandler { | fullCtx } ()
+  => Ref (Record appCtx)
+  -> OmHandler { httpRequest :: RequestContext | appCtx } ()
   -> RouteHandler
 wrapOmHandler contextRef omHandler = \req reply -> do
   -- Extract all request data from FastifyRequest
@@ -180,17 +138,11 @@ wrapOmHandler contextRef omHandler = \req reply -> do
   appContext <- liftEffect $ Ref.read contextRef
 
   -- Insert httpRequest field into app context
-  -- unsafeCoerce is safe here: Lacks ensures no collision, Cons describes the result type
   let
-    fullContext :: { | fullCtx }
-    fullContext = unsafeCoerce (Record.insert (Proxy :: _ "httpRequest") requestContext appContext)
+    fullContext = Record.insert (Proxy :: _ "httpRequest") requestContext appContext
 
   -- Run Om handler with full context (app + httpRequest)
   Om.runOm fullContext { exception: Aff.throwError } (omHandler reply)
-
---------------------------------------------------------------------------------
--- OM-AWARE ROUTE REGISTRATION (with httpRequest in context!)
---------------------------------------------------------------------------------
 
 -- | Register GET route with Om handler (httpRequest injected into context)
 -- |
@@ -202,82 +154,68 @@ wrapOmHandler contextRef omHandler = \req reply -> do
 -- |     -- Or use helpers:
 -- |     hdrs <- requestHeaders
 getOm
-  :: forall appCtx fullCtx
+  :: forall appCtx
    . Lacks "httpRequest" appCtx
-  => Cons "httpRequest" RequestContext appCtx fullCtx
   => RouteURL
-  -> OmHandler { | fullCtx } ()
+  -> OmHandler { httpRequest :: RequestContext | appCtx } ()
   -> OmFastify appCtx
   -> Effect Unit
-getOm routeUrl omHandler omApp =
-  F.route
-    { method: F.HTTPMethod "GET", url: routeUrl }
-    (unsafeCoerce (wrapOmHandler omApp.contextRef) omHandler)
-    omApp.fastify
+getOm routeUrl omHandler omApp = F.route
+  { method: F.HTTPMethod "GET", url: routeUrl }
+  (wrapOmHandler omApp.contextRef omHandler)
+  omApp.fastify
 
 -- | Register POST route with Om handler (httpRequest injected into context)
 postOm
-  :: forall appCtx fullCtx
+  :: forall appCtx
    . Lacks "httpRequest" appCtx
-  => Cons "httpRequest" RequestContext appCtx fullCtx
   => RouteURL
-  -> OmHandler { | fullCtx } ()
+  -> OmHandler { httpRequest :: RequestContext | appCtx } ()
   -> OmFastify appCtx
   -> Effect Unit
-postOm routeUrl omHandler omApp =
-  F.route
-    { method: F.HTTPMethod "POST", url: routeUrl }
-    (unsafeCoerce (wrapOmHandler omApp.contextRef) omHandler)
-    omApp.fastify
+postOm routeUrl omHandler omApp = F.route
+  { method: F.HTTPMethod "POST", url: routeUrl }
+  (wrapOmHandler omApp.contextRef omHandler)
+  omApp.fastify
 
 -- | Register PUT route with Om handler (httpRequest injected into context)
 putOm
-  :: forall appCtx fullCtx
+  :: forall appCtx
    . Lacks "httpRequest" appCtx
-  => Cons "httpRequest" RequestContext appCtx fullCtx
   => RouteURL
-  -> OmHandler { | fullCtx } ()
+  -> OmHandler { httpRequest :: RequestContext | appCtx } ()
   -> OmFastify appCtx
   -> Effect Unit
-putOm routeUrl omHandler omApp =
-  F.route
-    { method: F.HTTPMethod "PUT", url: routeUrl }
-    (unsafeCoerce (wrapOmHandler omApp.contextRef) omHandler)
-    omApp.fastify
+putOm routeUrl omHandler omApp = F.route
+  { method: F.HTTPMethod "PUT", url: routeUrl }
+  (wrapOmHandler omApp.contextRef omHandler)
+  omApp.fastify
 
 -- | Register DELETE route with Om handler (httpRequest injected into context)
 deleteOm
-  :: forall appCtx fullCtx
+  :: forall appCtx
    . Lacks "httpRequest" appCtx
-  => Cons "httpRequest" RequestContext appCtx fullCtx
   => RouteURL
-  -> OmHandler { | fullCtx } ()
+  -> OmHandler { httpRequest :: RequestContext | appCtx } ()
   -> OmFastify appCtx
   -> Effect Unit
-deleteOm routeUrl omHandler omApp =
-  F.route
-    { method: F.HTTPMethod "DELETE", url: routeUrl }
-    (unsafeCoerce (wrapOmHandler omApp.contextRef) omHandler)
-    omApp.fastify
+deleteOm routeUrl omHandler omApp = F.route
+  { method: F.HTTPMethod "DELETE", url: routeUrl }
+  (wrapOmHandler omApp.contextRef omHandler)
+  omApp.fastify
 
 -- | Register PATCH route with Om handler (httpRequest injected into context)
 patchOm
-  :: forall appCtx fullCtx
+  :: forall appCtx
    . Lacks "httpRequest" appCtx
-  => Cons "httpRequest" RequestContext appCtx fullCtx
   => RouteURL
-  -> OmHandler { | fullCtx } ()
+  -> OmHandler { httpRequest :: RequestContext | appCtx } ()
   -> OmFastify appCtx
   -> Effect Unit
-patchOm routeUrl omHandler omApp =
-  F.route
-    { method: F.HTTPMethod "PATCH", url: routeUrl }
-    (unsafeCoerce (wrapOmHandler omApp.contextRef) omHandler)
-    omApp.fastify
-
---------------------------------------------------------------------------------
--- REQUEST DATA ACCESSORS (from context via ask)
---------------------------------------------------------------------------------
+patchOm routeUrl omHandler omApp = F.route
+  { method: F.HTTPMethod "PATCH", url: routeUrl }
+  (wrapOmHandler omApp.contextRef omHandler)
+  omApp.fastify
 
 -- | Get full HTTP request context from Om context
 -- |
@@ -285,11 +223,9 @@ patchOm routeUrl omHandler omApp =
 -- |   req <- httpRequest
 -- |   let hdrs = req.headers
 httpRequest
-  :: forall ctx err rest
-   . Cons "httpRequest" RequestContext rest ctx
-  => Om { | ctx } err RequestContext
--- Note: unsafeCoerce is safe here - the Cons constraint proves the field exists at compile-time
-httpRequest = Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest
+  :: forall err rest
+   . Om { httpRequest :: RequestContext | rest } err RequestContext
+httpRequest = Om.asks _.httpRequest
 
 -- | Get headers from Om context (no parameter needed!)
 -- |
@@ -297,11 +233,9 @@ httpRequest = Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest
 -- |   hdrs <- requestHeaders
 -- |   case Object.lookup "authorization" hdrs of ...
 requestHeaders
-  :: forall ctx err rest
-   . Cons "httpRequest" RequestContext rest ctx
-  => Om { | ctx } err (Object String)
--- Note: unsafeCoerce is safe here - the Cons constraint proves the field exists at compile-time
-requestHeaders = Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.headers
+  :: forall err rest
+   . Om { httpRequest :: RequestContext | rest } err (Object String)
+requestHeaders = Om.asks _.httpRequest.headers
 
 -- | Get path params from Om context (no parameter needed!)
 -- |
@@ -309,11 +243,9 @@ requestHeaders = Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.headers
 -- |   ps <- requestParams
 -- |   case Object.lookup "id" ps of ...
 requestParams
-  :: forall ctx err rest
-   . Cons "httpRequest" RequestContext rest ctx
-  => Om { | ctx } err (Object String)
--- Note: unsafeCoerce is safe here - the Cons constraint proves the field exists at compile-time
-requestParams = Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.params
+  :: forall err rest
+   . Om { httpRequest :: RequestContext | rest } err (Object String)
+requestParams = Om.asks _.httpRequest.params
 
 -- | Get query params from Om context (no parameter needed!)
 -- |
@@ -321,11 +253,9 @@ requestParams = Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.params
 -- |   q <- requestQuery
 -- |   case Object.lookup "limit" q of ...
 requestQuery
-  :: forall ctx err rest
-   . Cons "httpRequest" RequestContext rest ctx
-  => Om { | ctx } err (Object Foreign)
--- Note: unsafeCoerce is safe here - the Cons constraint proves the field exists at compile-time
-requestQuery = Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.query
+  :: forall err rest
+   . Om { httpRequest :: RequestContext | rest } err (Object Foreign)
+requestQuery = Om.asks _.httpRequest.query
 
 -- | Get request body from Om context (no parameter needed!)
 -- |
@@ -333,31 +263,21 @@ requestQuery = Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.query
 -- |   bodyMaybe <- requestBody
 -- |   case bodyMaybe of ...
 requestBody
-  :: forall ctx err rest
-   . Cons "httpRequest" RequestContext rest ctx
-  => Om { | ctx } err (Maybe Foreign)
--- Note: unsafeCoerce is safe here - the Cons constraint proves the field exists at compile-time
-requestBody = Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.body
+  :: forall err rest
+   . Om { httpRequest :: RequestContext | rest } err (Maybe Foreign)
+requestBody = Om.asks _.httpRequest.body
 
 -- | Get HTTP method from Om context (no parameter needed!)
 requestMethod
-  :: forall ctx err rest
-   . Cons "httpRequest" RequestContext rest ctx
-  => Om { | ctx } err HTTPMethod
--- Note: unsafeCoerce is safe here - the Cons constraint proves the field exists at compile-time
-requestMethod = Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.method
+  :: forall err rest
+   . Om { httpRequest :: RequestContext | rest } err HTTPMethod
+requestMethod = Om.asks _.httpRequest.method
 
 -- | Get request URL from Om context (no parameter needed!)
 requestUrl
-  :: forall ctx err rest
-   . Cons "httpRequest" RequestContext rest ctx
-  => Om { | ctx } err RouteURL
--- Note: unsafeCoerce is safe here - the Cons constraint proves the field exists at compile-time
-requestUrl = Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.url
-
---------------------------------------------------------------------------------
--- HIGH-LEVEL TYPED HELPERS
---------------------------------------------------------------------------------
+  :: forall err rest
+   . Om { httpRequest :: RequestContext | rest } err RouteURL
+requestUrl = Om.asks _.httpRequest.url
 
 -- | Error type for missing path parameter
 type MissingParam = { missingParam :: String }
@@ -382,12 +302,11 @@ type QueryParamErrors = { missing :: Array String, invalid :: Array String }
 -- | Example:
 -- |   userId <- requiredParam "id"
 requiredParam
-  :: forall ctx rest
-   . Cons "httpRequest" RequestContext rest ctx
-  => String
-  -> Om { | ctx } (missingParam :: String) String
+  :: forall rest
+   . String
+  -> Om { httpRequest :: RequestContext | rest } (missingParam :: String) String
 requiredParam key = do
-  ps <- Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.params
+  ps <- requestParams
   case Object.lookup key ps of
     Just value -> pure value
     Nothing -> Om.throw { missingParam: key }
@@ -397,12 +316,11 @@ requiredParam key = do
 -- | Example:
 -- |   userIdMaybe <- param "id"
 param
-  :: forall ctx err rest
-   . Cons "httpRequest" RequestContext rest ctx
-  => String
-  -> Om { | ctx } err (Maybe String)
+  :: forall err rest
+   . String
+  -> Om { httpRequest :: RequestContext | rest } err (Maybe String)
 param key = do
-  ps <- Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.params
+  ps <- requestParams
   pure $ Object.lookup key ps
 
 -- | Parse a String to a specific type (used internally by requiredParams)
@@ -437,7 +355,7 @@ instance
   , Lacks name tailRow
   ) =>
   ParseParams (RL.Cons name ty tail) r where
-  parseParams _ ps =
+  parseParams _ ps = do
     let
       key = Proxy :: Proxy name
       keyName = reflectSymbol key
@@ -449,15 +367,14 @@ instance
           Right value -> Right value
       -- Parse the rest
       restResult = parseParams (Proxy :: Proxy tail) ps
-    in
-      case valueResult, restResult of
-        Right value, Right rest -> Right (Record.insert key value rest)
-        Left err1, Left err2 -> Left
-          { missing: err1.missing <> err2.missing
-          , invalid: err1.invalid <> err2.invalid
-          }
-        Left err, Right _ -> Left err
-        Right _, Left err -> Left err
+    case valueResult, restResult of
+      Right value, Right rest -> Right (Record.insert key value rest)
+      Left err1, Left err2 -> Left
+        { missing: err1.missing <> err2.missing
+        , invalid: err1.invalid <> err2.invalid
+        }
+      Left err, Right _ -> Left err
+      Right _, Left err -> Left err
 
 -- | Get multiple required path parameters as a typed record
 -- | Throws ParamErrors with all missing and invalid fields
@@ -465,14 +382,13 @@ instance
 -- | Example:
 -- |   { userId, postId } <- requiredParams (Proxy :: _ { userId :: Int, postId :: String })
 requiredParams
-  :: forall ctx rest r rl
-   . Cons "httpRequest" RequestContext rest ctx
-  => RowToList r rl
+  :: forall rest r rl
+   . RowToList r rl
   => ParseParams rl r
   => Proxy r
-  -> Om { | ctx } (paramErrors :: ParamErrors) (Record r)
+  -> Om { httpRequest :: RequestContext | rest } (paramErrors :: ParamErrors) (Record r)
 requiredParams _ = do
-  ps <- Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.params
+  ps <- requestParams
   case parseParams (Proxy :: Proxy rl) ps of
     Right parsed -> pure parsed
     Left errors -> Om.throw { paramErrors: errors }
@@ -492,7 +408,7 @@ instance
   , Lacks name tailRow
   ) =>
   ParseOptionalParams (RL.Cons name ty tail) r where
-  parseOptionalParams _ ps =
+  parseOptionalParams _ ps = do
     let
       key = Proxy :: Proxy name
       keyName = reflectSymbol key
@@ -500,8 +416,7 @@ instance
         Left _ -> Nothing
         Right parsed -> Just parsed
       rest = parseOptionalParams (Proxy :: Proxy tail) ps
-    in
-      Record.insert key value rest
+    Record.insert key value rest
 
 -- | Get multiple optional path parameters as a typed record with Maybe fields
 -- |
@@ -509,14 +424,13 @@ instance
 -- |   { userId, postId } <- optionalParams (Proxy :: _ { userId :: Int, postId :: String })
 -- |   -- Returns { userId :: Maybe Int, postId :: Maybe String }
 optionalParams
-  :: forall ctx rest r rl
-   . Cons "httpRequest" RequestContext rest ctx
-  => RowToList r rl
+  :: forall rest r rl
+   . RowToList r rl
   => ParseOptionalParams rl r
   => Proxy r
-  -> Om { | ctx } () (Record r)
+  -> Om { httpRequest :: RequestContext | rest } () (Record r)
 optionalParams _ = do
-  ps <- Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.params
+  ps <- requestParams
   pure $ parseOptionalParams (Proxy :: Proxy rl) ps
 
 -- | Get a required header, throws MissingHeader if not found
@@ -524,12 +438,11 @@ optionalParams _ = do
 -- | Example:
 -- |   authToken <- requiredHeader "authorization"
 requiredHeader
-  :: forall ctx rest
-   . Cons "httpRequest" RequestContext rest ctx
-  => String
-  -> Om { | ctx } (missingHeader :: String) String
+  :: forall rest
+   . String
+  -> Om { httpRequest :: RequestContext | rest } (missingHeader :: String) String
 requiredHeader key = do
-  hdrs <- Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.headers
+  hdrs <- requestHeaders
   case Object.lookup key hdrs of
     Just value -> pure value
     Nothing -> Om.throw { missingHeader: key }
@@ -539,12 +452,11 @@ requiredHeader key = do
 -- | Example:
 -- |   authTokenMaybe <- requestHeader "authorization"
 requestHeader
-  :: forall ctx err rest
-   . Cons "httpRequest" RequestContext rest ctx
-  => String
-  -> Om { | ctx } err (Maybe String)
+  :: forall err rest
+   . String
+  -> Om { httpRequest :: RequestContext | rest } err (Maybe String)
 requestHeader key = do
-  hdrs <- Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.headers
+  hdrs <- requestHeaders
   pure $ Object.lookup key hdrs
 
 -- | Get multiple required headers as a typed record
@@ -553,14 +465,13 @@ requestHeader key = do
 -- | Example:
 -- |   { authorization, contentType } <- requiredHeaders (Proxy :: _ { authorization :: String, contentType :: String })
 requiredHeaders
-  :: forall ctx rest r rl
-   . Cons "httpRequest" RequestContext rest ctx
-  => RowToList r rl
+  :: forall rest r rl
+   . RowToList r rl
   => ParseParams rl r
   => Proxy r
-  -> Om { | ctx } (headerErrors :: HeaderErrors) (Record r)
+  -> Om { httpRequest :: RequestContext | rest } (headerErrors :: HeaderErrors) (Record r)
 requiredHeaders _ = do
-  hdrs <- Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.headers
+  hdrs <- requestHeaders
   case parseParams (Proxy :: Proxy rl) hdrs of
     Right parsed -> pure parsed
     Left errors -> Om.throw { headerErrors: errors }
@@ -571,14 +482,13 @@ requiredHeaders _ = do
 -- |   { authorization, userAgent } <- optionalHeaders (Proxy :: _ { authorization :: String, userAgent :: String })
 -- |   -- Returns { authorization :: Maybe String, userAgent :: Maybe String }
 optionalHeaders
-  :: forall ctx rest r rl
-   . Cons "httpRequest" RequestContext rest ctx
-  => RowToList r rl
+  :: forall rest r rl
+   . RowToList r rl
   => ParseOptionalParams rl r
   => Proxy r
-  -> Om { | ctx } () (Record r)
+  -> Om { httpRequest :: RequestContext | rest } () (Record r)
 optionalHeaders _ = do
-  hdrs <- Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.headers
+  hdrs <- requestHeaders
   pure $ parseOptionalParams (Proxy :: Proxy rl) hdrs
 
 -- | Get a required query parameter, throws MissingQueryParam if not found
@@ -588,12 +498,11 @@ optionalHeaders _ = do
 -- |   limitForeign <- requiredQueryParam "limit"
 -- |   limit <- liftEffect $ J.readJSON limitForeign
 requiredQueryParam
-  :: forall ctx rest
-   . Cons "httpRequest" RequestContext rest ctx
-  => String
-  -> Om { | ctx } (missingQueryParam :: String) Foreign
+  :: forall rest
+   . String
+  -> Om { httpRequest :: RequestContext | rest } (missingQueryParam :: String) Foreign
 requiredQueryParam key = do
-  q <- Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.query
+  q <- requestQuery
   case Object.lookup key q of
     Just value -> pure value
     Nothing -> Om.throw { missingQueryParam: key }
@@ -603,25 +512,18 @@ requiredQueryParam key = do
 -- | Example:
 -- |   limitMaybe <- queryParam "limit"
 queryParam
-  :: forall ctx err rest
-   . Cons "httpRequest" RequestContext rest ctx
-  => String
-  -> Om { | ctx } err (Maybe Foreign)
+  :: forall err rest
+   . String
+  -> Om { httpRequest :: RequestContext | rest } err (Maybe Foreign)
 queryParam key = do
-  q <- Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.query
+  q <- requestQuery
   pure $ Object.lookup key q
 
 -- | Typeclass to parse query params (Foreign) into a record, accumulating all errors
 -- |
--- | ARCHITECTURAL NOTE:
 -- | Query params are typed as `Object Foreign` to match TypeScript's `unknown` type.
--- | Currently, we use `unsafeCoerce` to convert Foreign -> String for the default
--- | Fastify querystring parser (which produces strings/string arrays).
--- |
--- | FUTURE: Integrate yoga-json's ReadForeign typeclass for proper Foreign decoding:
--- |   - Remove ParseParam dependency
--- |   - Use J.readJSON or J.readImpl for type-safe Foreign -> ty conversion
--- |   - Handle complex query param types (nested objects, arrays, etc.)
+-- | We use yoga-json's ReadForeign to safely decode Foreign -> String, then ParseParam
+-- | to convert String -> target type.
 class ParseQueryParams (rl :: RowList Type) (r :: Row Type) | rl -> r where
   parseQueryParams :: Proxy rl -> Object Foreign -> Either { missing :: Array String, invalid :: Array String } (Record r)
 
@@ -636,33 +538,28 @@ instance
   , Lacks name tailRow
   ) =>
   ParseQueryParams (RL.Cons name ty tail) r where
-  parseQueryParams _ qps =
+  parseQueryParams _ qps = do
     let
       key = Proxy :: Proxy name
       keyName = reflectSymbol key
       -- Check if field exists and parse it (Foreign -> ty via ParseParam)
-      -- Note: unsafeCoerce Foreign -> String is safe for default Fastify querystring parser
-      -- TODO: Replace with yoga-json's ReadForeign for proper type-safe decoding
       valueResult = case Object.lookup keyName qps of
         Nothing -> Left { missing: [ keyName ], invalid: [] }
-        Just foreignVal ->
-          let
-            valueStr = unsafeCoerce foreignVal :: String -- Safe: default parser produces strings
-          in
-            case parseParam valueStr of
-              Left _ -> Left { missing: [], invalid: [ keyName ] }
-              Right value -> Right value
+        Just foreignVal -> case runExcept (readImpl foreignVal) of
+          Left _ -> Left { missing: [], invalid: [ keyName ] }
+          Right (valueStr :: String) -> case parseParam valueStr of
+            Left _ -> Left { missing: [], invalid: [ keyName ] }
+            Right value -> Right value
       -- Parse the rest
       restResult = parseQueryParams (Proxy :: Proxy tail) qps
-    in
-      case valueResult, restResult of
-        Right value, Right rest -> Right (Record.insert key value rest)
-        Left err1, Left err2 -> Left
-          { missing: err1.missing <> err2.missing
-          , invalid: err1.invalid <> err2.invalid
-          }
-        Left err, Right _ -> Left err
-        Right _, Left err -> Left err
+    case valueResult, restResult of
+      Right value, Right rest -> Right (Record.insert key value rest)
+      Left err1, Left err2 -> Left
+        { missing: err1.missing <> err2.missing
+        , invalid: err1.invalid <> err2.invalid
+        }
+      Left err, Right _ -> Left err
+      Right _, Left err -> Left err
 
 -- | Get multiple required query parameters as a typed record
 -- | Throws QueryParamErrors with all missing and invalid fields
@@ -670,14 +567,13 @@ instance
 -- | Example:
 -- |   { page, limit } <- requiredQueryParams (Proxy :: _ { page :: Int, limit :: Int })
 requiredQueryParams
-  :: forall ctx rest r rl
-   . Cons "httpRequest" RequestContext rest ctx
-  => RowToList r rl
+  :: forall rest r rl
+   . RowToList r rl
   => ParseQueryParams rl r
   => Proxy r
-  -> Om { | ctx } (queryParamErrors :: QueryParamErrors) (Record r)
+  -> Om { httpRequest :: RequestContext | rest } (queryParamErrors :: QueryParamErrors) (Record r)
 requiredQueryParams _ = do
-  q <- Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.query
+  q <- requestQuery
   case parseQueryParams (Proxy :: Proxy rl) q of
     Right parsed -> pure parsed
     Left errors -> Om.throw { queryParamErrors: errors }
@@ -698,20 +594,20 @@ instance
   , Lacks name tailRow
   ) =>
   ParseOptionalQueryParams (RL.Cons name ty tail) r where
-  parseOptionalQueryParams _ qps =
+  parseOptionalQueryParams _ qps = do
     let
       key = Proxy :: Proxy name
       keyName = reflectSymbol key
       value = do
         foreignVal <- Object.lookup keyName qps
-        -- TODO: Replace with yoga-json's ReadForeign for proper type-safe decoding
-        let valueStr = unsafeCoerce foreignVal :: String -- Safe: default parser produces strings
+        valueStr <- case runExcept (readImpl foreignVal) of
+          Left _ -> Nothing
+          Right (s :: String) -> Just s
         case parseParam valueStr of
           Left _ -> Nothing
           Right parsed -> Just parsed
       rest = parseOptionalQueryParams (Proxy :: Proxy tail) qps
-    in
-      Record.insert key value rest
+    Record.insert key value rest
 
 -- | Get multiple optional query parameters as a typed record with Maybe fields
 -- |
@@ -719,102 +615,11 @@ instance
 -- |   { page, limit } <- optionalQueryParams (Proxy :: _ { page :: Int, limit :: Int })
 -- |   -- Returns { page :: Maybe Int, limit :: Maybe Int }
 optionalQueryParams
-  :: forall ctx rest r rl
-   . Cons "httpRequest" RequestContext rest ctx
-  => RowToList r rl
+  :: forall rest r rl
+   . RowToList r rl
   => ParseOptionalQueryParams rl r
   => Proxy r
-  -> Om { | ctx } () (Record r)
+  -> Om { httpRequest :: RequestContext | rest } () (Record r)
 optionalQueryParams _ = do
-  q <- Om.ask <#> \rec -> (unsafeCoerce rec).httpRequest.query
+  q <- requestQuery
   pure $ parseOptionalQueryParams (Proxy :: Proxy rl) q
-
---------------------------------------------------------------------------------
--- LEGACY OM-FRIENDLY SERVER OPERATIONS (backwards compatibility)
---------------------------------------------------------------------------------
-
--- | Om-friendly listen
-listen :: forall ctx err opts opts_. Union opts opts_ F.ListenOptionsImpl => { | opts } -> F.Fastify -> Om ctx err String
-listen opts app = liftAff $ F.listen opts app
-
--- | Om-friendly close
-close :: forall ctx err. F.Fastify -> Om ctx err Unit
-close = liftAff <<< F.close
-
--- | Om-friendly GET route
-get :: forall ctx err. F.RouteURL -> F.RouteHandler -> F.Fastify -> Om ctx err Unit
-get routeUrl handler app = liftEffect $ F.get routeUrl handler app
-
--- | Om-friendly POST route
-post :: forall ctx err. F.RouteURL -> F.RouteHandler -> F.Fastify -> Om ctx err Unit
-post routeUrl handler app = liftEffect $ F.post routeUrl handler app
-
--- | Om-friendly PUT route
-put :: forall ctx err. F.RouteURL -> F.RouteHandler -> F.Fastify -> Om ctx err Unit
-put routeUrl handler app = liftEffect $ F.put routeUrl handler app
-
--- | Om-friendly DELETE route
-delete :: forall ctx err. F.RouteURL -> F.RouteHandler -> F.Fastify -> Om ctx err Unit
-delete routeUrl handler app = liftEffect $ F.delete routeUrl handler app
-
--- | Om-friendly PATCH route
-patch :: forall ctx err. F.RouteURL -> F.RouteHandler -> F.Fastify -> Om ctx err Unit
-patch routeUrl handler app = liftEffect $ F.patch routeUrl handler app
-
--- | Om-friendly route registration
-route
-  :: forall ctx err opts opts_
-   . Union opts opts_ F.RouteOptionsImpl
-  => { | opts }
-  -> F.RouteHandler
-  -> F.Fastify
-  -> Om ctx err Unit
-route opts handler app = liftEffect $ F.route opts handler app
-
--- Request API
-
--- | Om-friendly body
-body :: forall ctx err. F.FastifyRequest -> Om ctx err (Maybe Foreign)
-body = liftEffect <<< F.body
-
--- | Om-friendly params
-params :: forall ctx err. F.FastifyRequest -> Om ctx err (Object String)
-params = liftEffect <<< F.params
-
--- | Om-friendly query
-query :: forall ctx err. F.FastifyRequest -> Om ctx err (Object Foreign)
-query = liftEffect <<< F.query
-
--- | Alias for query (kept for backwards compatibility)
-queryString :: forall ctx err. F.FastifyRequest -> Om ctx err (Object Foreign)
-queryString = query
-
--- | Om-friendly headers
-headers :: forall ctx err. F.FastifyRequest -> Om ctx err (Object String)
-headers = liftEffect <<< F.headers
-
--- | Om-friendly method
-method :: forall ctx err. F.FastifyRequest -> Om ctx err F.HTTPMethod
-method = liftEffect <<< F.method
-
--- | Om-friendly url
-url :: forall ctx err. F.FastifyRequest -> Om ctx err F.RouteURL
-url = liftEffect <<< F.url
-
--- Reply API
-
--- | Om-friendly status
-status :: forall ctx err. F.StatusCode -> F.FastifyReply -> Om ctx err F.FastifyReply
-status code reply = liftEffect $ F.status code reply
-
--- | Om-friendly header
-header :: forall ctx err. String -> String -> F.FastifyReply -> Om ctx err F.FastifyReply
-header key value reply = liftEffect $ F.header key value reply
-
--- | Om-friendly send
-send :: forall ctx err. Foreign -> F.FastifyReply -> Om ctx err Unit
-send payload reply = liftAff $ F.send payload reply
-
--- | Om-friendly sendJson
-sendJson :: forall ctx err. Foreign -> F.FastifyReply -> Om ctx err Unit
-sendJson payload reply = liftAff $ F.sendJson payload reply
