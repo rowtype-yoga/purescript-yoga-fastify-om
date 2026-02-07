@@ -21,6 +21,7 @@ import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.Fastify.Om.API (registerAPI)
 import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respond, reject, buildOpenAPISpec', class HeaderValueType, BearerToken, Enum, class RenderJSONSchema, class HasEnum, enum)
+import Yoga.HTTP.API.Route.OpenAPI (class CollectSchemas, class CollectSchemaNames)
 import Yoga.HTTP.API.Path (class ParseParam, parseParam, type (/), type (:), type (:?))
 import Yoga.JSON (class ReadForeign, class WriteForeign, writeJSON)
 import Yoga.JSON.Generics (genericWriteForeignEnum, genericReadForeignEnum)
@@ -72,6 +73,11 @@ derive newtype instance ReadForeign UserId
 instance RenderJSONSchema UserId where
   renderJSONSchema _ = unsafeToForeign $ FObject.fromFoldable
     [ Tuple "type" (unsafeToForeign "integer") ]
+
+instance CollectSchemas UserId where
+  collectSchemas _ = FObject.empty
+
+instance CollectSchemaNames UserId ()
 
 instance ParseParam UserId where
   parseParam s = parseParam s >>= \n ->
@@ -222,3 +228,8 @@ instance RenderJSONSchema UserRole where
     case enumValues of
       Nothing -> unsafeToForeign baseSchema
       Just vals -> unsafeToForeign $ FObject.insert "enum" (unsafeToForeign vals) baseSchema
+
+instance CollectSchemas UserRole where
+  collectSchemas _ = FObject.empty
+
+instance CollectSchemaNames UserRole ()
