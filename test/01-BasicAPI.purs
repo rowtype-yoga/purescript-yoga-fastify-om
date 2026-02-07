@@ -4,9 +4,9 @@ import Prelude
 
 import Control.Monad.Reader.Trans (ask)
 import Data.Either (Either(..))
+import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
-import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\))
@@ -19,39 +19,22 @@ import Foreign.Object as FObject
 import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
+import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respondReason, reject, buildOpenAPISpec', class HeaderValueType, BearerToken, Enum, class RenderJSONSchema, class HasEnum, enum)
 import Yoga.HTTP.API.Path (class ParseParam, parseParam, type (/), type (:), type (:?))
-import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respond, reject, buildOpenAPISpec', class HeaderValueType, BearerToken, Enum, class RenderJSONSchema, class HasEnum, enum)
-import Yoga.JSON (writeJSON, class WriteForeign, class ReadForeign)
+import Yoga.JSON (class ReadForeign, class WriteForeign, writeJSON)
 import Yoga.JSON.Generics (genericWriteForeignEnum, genericReadForeignEnum)
+import Yoga.JSON.Generics.EnumSumRep as GenericJSON
+
+main :: Effect Unit
+main = Aff.launchAff_ do
+  server <- createServer # liftEffect
+  address <- F.listen { port: Port 3000, host: Host "0.0.0.0" } server
+  Console.log $ "Server listening on " <> address
 
 -- Example Types
 
--- User role enum
-data UserRole = Admin | Member | Guest
-
-derive instance Generic UserRole _
-instance Show UserRole where
-  show = genericShow
-
-instance WriteForeign UserRole where
-  writeImpl = genericWriteForeignEnum { toConstructorName: identity }
-
-instance ReadForeign UserRole where
-  readImpl = genericReadForeignEnum { toConstructorName: identity }
-
-instance RenderJSONSchema UserRole where
-  renderJSONSchema _ = do
-    let
-      enumValues = enum (Proxy :: Proxy (Enum UserRole))
-      baseSchema = FObject.fromFoldable
-        [ Tuple "type" (unsafeToForeign "string")
-        ]
-    case enumValues of
-      Nothing -> unsafeToForeign baseSchema
-      Just vals -> unsafeToForeign $ FObject.insert "enum" (unsafeToForeign vals) baseSchema
-
 type User =
-  { id :: Int
+  { id :: UserId
   , name :: String
   , email :: String
   , role :: UserRole
@@ -76,12 +59,14 @@ type HealthRoute = Route GET "health"
 
 healthHandler :: Handler HealthRoute
 healthHandler = handle do
-  respond { ok: { status: "healthy" } }
+  respondReason @"ok" { status: "healthy" }
 
 newtype UserId = UserId Int
 
 derive instance Newtype UserId _
 derive newtype instance Eq UserId
+derive newtype instance WriteForeign UserId
+derive newtype instance ReadForeign UserId
 
 instance ParseParam UserId where
   parseParam s = parseParam s >>= \n ->
@@ -104,8 +89,8 @@ userHandler :: Handler UserRoute
 userHandler = handle do
   { path } <- ask
   when (path.id /= UserId 1) do
-    reject { notFound: { error: "User not found" } }
-  respond { ok: { id: 1, name: "Alice", email: "alice@example.com", role: Admin } }
+    reject @"notFound" { error: "User not found" }
+  respondReason @"ok" { id: UserId 1, name: "Alice", email: "alice@example.com", role: Admin }
 
 -- GET /users?limit=10
 type UsersWithLimitRoute = Route GET
@@ -117,14 +102,12 @@ type UsersWithLimitRoute = Route GET
 usersWithLimitHandler :: Handler UsersWithLimitRoute
 usersWithLimitHandler = handle do
   { query } <- ask
-  respond
-    { ok:
-        { users:
-            [ { id: 1, name: "Alice", email: "alice@example.com", role: Admin }
-            , { id: 2, name: "Bob", email: "bob@example.com", role: Member }
-            ]
-        , limit: query.limit
-        }
+  respondReason @"ok"
+    { users:
+        [ { id: UserId 1, name: "Alice", email: "alice@example.com", role: Admin }
+        , { id: UserId 2, name: "Bob", email: "bob@example.com", role: Member }
+        ]
+    , limit: query.limit
     }
 
 -- POST /users (with authentication)
@@ -144,8 +127,8 @@ createUserHandler :: Handler CreateUserRoute
 createUserHandler = handle do
   { body } <- ask
   when (body.name == "") do
-    reject { badRequest: { error: "Name cannot be empty" } }
-  respond { created: { id: 999, name: body.name, email: body.email, role: body.role } }
+    reject @"badRequest" { error: "Name cannot be empty" }
+  respondReason @"created" { id: 999, name: body.name, email: body.email, role: body.role }
 
 -- GET /openapi - Serve OpenAPI spec
 type OpenAPIRoute = Route GET
@@ -164,23 +147,22 @@ type AllApiRoutes =
 
 openapiHandler :: Handler OpenAPIRoute
 openapiHandler = handle do
-  respond
-    { ok:
-        writeJSON $
-          buildOpenAPISpec' @AllApiRoutes
-            { title: "Example API"
-            , version: "1.0.0"
-            }
-            { servers: Just
-                [ { url: "http://localhost:3000"
-                  , description: Just "Local development server"
-                  }
-                , { url: "https://api.example.com"
-                  , description: Just "Production server"
-                  }
-                ]
-            }
-    }
+  respondReason @"ok"
+    $ writeJSON
+    $
+      buildOpenAPISpec' @AllApiRoutes
+        { title: "Example API"
+        , version: "1.0.0"
+        }
+        { servers: Just
+            [ { url: "http://localhost:3000"
+              , description: Just "Local development server"
+              }
+            , { url: "https://api.example.com"
+              , description: Just "Production server"
+              }
+            ]
+        }
 
 -- Server Setup
 
@@ -199,8 +181,26 @@ createServer = do
 
   pure fastify
 
-main :: Effect Unit
-main = Aff.launchAff_ do
-  server <- liftEffect createServer
-  address <- F.listen { port: Port 3000, host: Host "0.0.0.0" } server
-  Console.log $ "Server listening on " <> address
+-- User role enum
+data UserRole = Admin | Member | Guest
+
+derive instance Generic UserRole _
+instance Show UserRole where
+  show = genericShow
+
+instance WriteForeign UserRole where
+  writeImpl = genericWriteForeignEnum GenericJSON.defaultOptions
+
+instance ReadForeign UserRole where
+  readImpl = genericReadForeignEnum GenericJSON.defaultOptions
+
+instance RenderJSONSchema UserRole where
+  renderJSONSchema _ = do
+    let
+      enumValues = enum (Proxy :: Proxy (Enum UserRole))
+      baseSchema = FObject.fromFoldable
+        [ Tuple "type" (unsafeToForeign "string")
+        ]
+    case enumValues of
+      Nothing -> unsafeToForeign baseSchema
+      Just vals -> unsafeToForeign $ FObject.insert "enum" (unsafeToForeign vals) baseSchema

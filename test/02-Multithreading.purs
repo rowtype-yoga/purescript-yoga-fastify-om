@@ -18,7 +18,7 @@ import Node.WorkerBees.Aff.Pool as Pool
 import Yoga.Fastify.Fastify (Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.HTTP.API.Path (type (/), type (:))
-import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respond, reject)
+import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respondReason, reject)
 import Yoga.Om as Om
 import Yoga.Om.WorkerBees (WorkerPool)
 
@@ -77,56 +77,56 @@ type API =
 
 healthHandler :: Handler HealthRoute
 healthHandler = handle do
-  respond { ok: { status: "ok" } }
+  respondReason @"ok" { status: "ok" }
 
 fibHandler :: WorkerPool FibInput FibOutput -> Handler FibRoute
 fibHandler pool = handle do
   { path } <- ask
   let n = path.n
   when (n < 0) do
-    reject { badRequest: { error: "n must be non-negative" } }
+    reject @"badRequest" { error: "n must be non-negative" }
   when (n > 40) do
-    reject { badRequest: { error: "n must be <= 40" } }
+    reject @"badRequest" { error: "n must be <= 40" }
   result <- Om.fromAff $ Pool.invoke pool { n }
-  respond { ok: { n, result: result.result } }
+  respondReason @"ok" { n, result: result.result }
 
 fibBatchHandler :: WorkerPool FibInput FibOutput -> Handler FibBatchRoute
 fibBatchHandler pool = handle do
   { body } <- ask
   let numbers = body.numbers
   when (Array.any (\n -> n < 0) numbers) do
-    reject { badRequest: { error: "all numbers must be non-negative" } }
+    reject @"badRequest" { error: "all numbers must be non-negative" }
   when (Array.any (\n -> n > 40) numbers) do
-    reject { badRequest: { error: "all numbers must be <= 40" } }
+    reject @"badRequest" { error: "all numbers must be <= 40" }
   when (Array.length numbers > 100) do
-    reject { badRequest: { error: "maximum 100 numbers per batch" } }
+    reject @"badRequest" { error: "maximum 100 numbers per batch" }
   let inputs = numbers <#> \n -> { n }
   outputs <- Om.fromAff $ parTraverse (Pool.invoke pool) inputs
   let results = Array.zipWith (\n output -> { n, result: output.result }) numbers outputs
-  respond { ok: { results } }
+  respondReason @"ok" { results }
 
 hashHandler :: WorkerPool HashInput HashOutput -> Handler HashRoute
 hashHandler pool = handle do
   { body } <- ask
   when (body.iterations < 1) do
-    reject { badRequest: { error: "iterations must be >= 1" } }
+    reject @"badRequest" { error: "iterations must be >= 1" }
   when (body.iterations > 1000) do
-    reject { badRequest: { error: "iterations must be <= 1000" } }
+    reject @"badRequest" { error: "iterations must be <= 1000" }
   result <- Om.fromAff $ Pool.invoke pool { text: body.text, iterations: body.iterations }
-  respond { ok: result }
+  respondReason @"ok" result
 
 hashBatchHandler :: WorkerPool HashInput HashOutput -> Handler HashBatchRoute
 hashBatchHandler pool = handle do
   { body } <- ask
   let inputs = body.inputs
   when (Array.any (\inp -> inp.iterations < 1) inputs) do
-    reject { badRequest: { error: "all iterations must be >= 1" } }
+    reject @"badRequest" { error: "all iterations must be >= 1" }
   when (Array.any (\inp -> inp.iterations > 1000) inputs) do
-    reject { badRequest: { error: "all iterations must be <= 1000" } }
+    reject @"badRequest" { error: "all iterations must be <= 1000" }
   when (Array.length inputs > 50) do
-    reject { badRequest: { error: "maximum 50 hashes per batch" } }
+    reject @"badRequest" { error: "maximum 50 hashes per batch" }
   results <- Om.fromAff $ parTraverse (Pool.invoke pool) inputs
-  respond { ok: { results } }
+  respondReason @"ok" { results }
 
 -- Server Setup
 

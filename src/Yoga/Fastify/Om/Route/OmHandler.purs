@@ -1,13 +1,11 @@
 module Yoga.Fastify.Om.Route.OmHandler
   ( handle
-  , respond
-  , respondWithHeaders
-  , respondNow
-  , respondNowWithHeaders
+  , respondReason
+  , respondWith
   , respondNoContent
   , respondNotModified
   , reject
-  , rejectWithHeaders
+  , rejectWith
   , class Is2xxStatus
   , class SplitResponse
   , class SplitResponseRL
@@ -20,7 +18,6 @@ import Prelude
 
 import Control.Monad.Error.Class (throwError)
 import Data.Symbol (class IsSymbol)
-import Data.Unit (Unit, unit)
 import Data.Variant (class VariantMatchCases, Variant)
 import Data.Variant as Variant
 import Effect.Aff as Aff
@@ -28,7 +25,6 @@ import Effect.Exception (Error)
 import Prim.Boolean (True, False)
 import Prim.Row as Row
 import Prim.RowList as RL
-import Record as Record
 import Record.Builder (Builder)
 import Record.Builder as Builder
 import Type.Proxy (Proxy(..))
@@ -126,79 +122,37 @@ instance
     handler :: ty -> Om ctx () (Variant respVariant)
     handler val = pure (Variant.inj (Proxy :: Proxy label) val)
 
--- | Return a 2xx response in an Om handler with no headers.
+-- | Return a response with a specific reason label (e.g., "ok", "created")
 -- |
 -- | Example:
 -- | ```purescript
--- | respond { ok: { id: 1, name: "Alice" } }
+-- | respondReason @"ok" { id: 1, name: "Alice" }
+-- | respondReason @"created" newUser
 -- | ```
-respond
-  :: forall rec label body r1 r2 ctx err
-   . RL.RowToList rec (RL.Cons label body RL.Nil)
-  => Row.Cons label body () rec
-  => IsSymbol label
+respondReason
+  :: forall @label body r1 r2 ctx err
+   . IsSymbol label
   => Row.Cons label (Response () body) r1 r2
-  => Record rec
+  => body
   -> Om ctx err (Variant r2)
-
-respond rec = do
-  let body = Record.get (Proxy :: Proxy label) rec
+respondReason body =
   pure (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body }))
 
--- | Return a 2xx response in an Om handler with custom headers.
+-- | Return a response with a specific reason label and custom headers
 -- |
 -- | Example:
 -- | ```purescript
--- | respondWithHeaders { created: { headers: { "Location": "/users/123" }, body: user } }
+-- | respondWith @"created" { "Location": "/users/123" } user
 -- | ```
-respondWithHeaders
-  :: forall rec label headers body r1 r2 ctx err
-   . RL.RowToList rec (RL.Cons label { headers :: Record headers, body :: body } RL.Nil)
-  => Row.Cons label { headers :: Record headers, body :: body } () rec
-  => IsSymbol label
+respondWith
+  :: forall @label headers body r1 r2 ctx err
+   . IsSymbol label
   => Row.Cons label (Response headers body) r1 r2
-  => Record rec
+  => Record headers
+  -> body
   -> Om ctx err (Variant r2)
-
-respondWithHeaders rec = do
-  let { headers, body } = Record.get (Proxy :: Proxy label) rec
+respondWith headers body =
   pure (Variant.inj (Proxy :: Proxy label) (Response { headers, body }))
-
--- | Short-circuit an Om handler with a 2xx response (no headers).
--- |
--- | Example:
--- | ```purescript
--- | respondNow { noContent: {} }
--- | ```
-respondNow
-  :: forall rec label body r1 successRow err ctx a
-   . RL.RowToList rec (RL.Cons label body RL.Nil)
-  => Row.Cons label body () rec
-  => IsSymbol label
-  => Row.Cons label (Response () body) r1 successRow
-  => Record rec
-  -> Om ctx (_respondNow :: Variant successRow | err) a
-respondNow rec = do
-  let body = Record.get (Proxy :: Proxy label) rec
-  throwError (Variant.inj (Proxy :: Proxy "_respondNow") (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body })))
-
--- | Short-circuit an Om handler with a 2xx response with custom headers.
--- |
--- | Example:
--- | ```purescript
--- | respondNowWithHeaders { ok: { headers: { "X-Cache": "HIT" }, body: cachedUser } }
--- | ```
-respondNowWithHeaders
-  :: forall rec label headers body r1 successRow err ctx a
-   . RL.RowToList rec (RL.Cons label { headers :: Record headers, body :: body } RL.Nil)
-  => Row.Cons label { headers :: Record headers, body :: body } () rec
-  => IsSymbol label
-  => Row.Cons label (Response headers body) r1 successRow
-  => Record rec
-  -> Om ctx (_respondNow :: Variant successRow | err) a
-respondNowWithHeaders rec = do
-  let { headers, body } = Record.get (Proxy :: Proxy label) rec
-  throwError (Variant.inj (Proxy :: Proxy "_respondNow") (Variant.inj (Proxy :: Proxy label) (Response { headers, body })))
 
 -- | Return a 204 No Content response (no headers, no body).
 -- |
@@ -228,42 +182,38 @@ respondNotModified
 respondNotModified =
   pure (Variant.inj (Proxy :: Proxy "notModified") (Response { headers: {}, body: unit }))
 
--- | Throw a non-2xx response in an Om handler (short-circuits) with no headers.
+-- | Throw a non-2xx error response (short-circuits the handler)
 -- |
 -- | Example:
 -- | ```purescript
--- | reject { notFound: { error: "User not found" } }
+-- | reject @"notFound" { error: "User not found" }
+-- | reject @"badRequest" { error: "Invalid input" }
 -- | ```
 reject
-  :: forall rec label body _r1 err _r2 ctx a
-   . RL.RowToList rec (RL.Cons label body RL.Nil)
-  => Row.Cons label body () rec
-  => IsSymbol label
+  :: forall @label body _r1 err _r2 ctx a
+   . IsSymbol label
   => Row.Cons label (Response () body) _r1 err
   => Row.Cons label (Response () body) _r2 (exception :: Error | err)
-  => Record rec
+  => body
   -> Om ctx err a
-reject rec = do
-  let body = Record.get (Proxy :: Proxy label) rec
+reject body =
   throwError (Variant.inj (Proxy :: Proxy label) (Response { headers: {}, body }))
 
--- | Throw a non-2xx response in an Om handler (short-circuits) with custom headers.
+-- | Throw a non-2xx error response with custom headers (short-circuits)
 -- |
 -- | Example:
 -- | ```purescript
--- | rejectWithHeaders { unauthorized: { headers: { "WWW-Authenticate": "Bearer" }, body: { error: "Invalid token" } } }
+-- | rejectWith @"unauthorized" { "WWW-Authenticate": "Bearer" } { error: "Invalid token" }
 -- | ```
-rejectWithHeaders
-  :: forall rec label headers body _r1 err _r2 ctx a
-   . RL.RowToList rec (RL.Cons label { headers :: Record headers, body :: body } RL.Nil)
-  => Row.Cons label { headers :: Record headers, body :: body } () rec
-  => IsSymbol label
+rejectWith
+  :: forall @label headers body _r1 err _r2 ctx a
+   . IsSymbol label
   => Row.Cons label (Response headers body) _r1 err
   => Row.Cons label (Response headers body) _r2 (exception :: Error | err)
-  => Record rec
+  => Record headers
+  -> body
   -> Om ctx err a
-rejectWithHeaders rec = do
-  let { headers, body } = Record.get (Proxy :: Proxy label) rec
+rejectWith headers body =
   throwError (Variant.inj (Proxy :: Proxy label) (Response { headers, body }))
 
 -- | Create a `Handler` from an Om computation.
