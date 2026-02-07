@@ -1,4 +1,4 @@
-module Test.ServerIntegration.Spec where
+module Test.Integration where
 
 import Prelude
 

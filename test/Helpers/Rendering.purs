@@ -1,4 +1,4 @@
-module Test.OperatorTest where
+module Test.Helpers.Rendering where
 
 import Prelude
 

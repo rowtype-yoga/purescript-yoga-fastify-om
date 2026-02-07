@@ -1,4 +1,4 @@
-module ParserTest.Spec where
+module Test.Parsing where
 
 import Prelude
 
@@ -6,7 +6,7 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Aff (Aff)
-import Test.ParserTest as Parser
+import Test.Helpers.Parsing as Parser
 import Type.Proxy (Proxy(..))
 import Yoga.HTTP.API.Path (Path, Required, type (/), type (:), type (:?))
 import ViTest (ViTest, describe, test)

@@ -3,75 +3,75 @@ module Test.Operators where
 import Prelude
 import Effect (Effect)
 import ViTest (ViTest, viTest)
-import OperatorTest.Spec as OperatorTest
-import ParserTest.Spec as ParserTest
-import RequestBodyTest.Spec as RequestBodyTest
-import RouteTest.Spec as RouteTest
-import Test.ServerIntegration.Spec as ServerIntegration
-import VariantResponseTest.Spec as VariantResponseTest
-import HandleRouteTest.Spec as HandleRouteTest
-import MetadataValidationTest.Spec as MetadataValidationTest
+import Test.Rendering as Rendering
+import Test.Parsing as Parsing
+import Test.HandleRoute as HandleRoute
+import Test.Headers as Headers
+import Test.RequestBody as RequestBody
+import Test.Responses as Responses
+import Test.Validation as Validation
+import Test.Integration as Integration
 
 spec :: Effect ViTest
 spec = do
   -- 1. Basic Building Blocks
-  _ <- OperatorTest.testRendering
-  _ <- ParserTest.testSegmentParsing
-  _ <- ParserTest.testCaptureParsing
+  _ <- Rendering.testRendering
+  _ <- Parsing.testSegmentParsing
+  _ <- Parsing.testCaptureParsing
 
   -- 2. Path Parsing
-  _ <- ParserTest.testPathParsing
-  _ <- ParserTest.testErrorCases
-  _ <- HandleRouteTest.testParsePathParams
+  _ <- Parsing.testPathParsing
+  _ <- Parsing.testErrorCases
+  _ <- HandleRoute.testParsePathParams
 
   -- 3. Query Parameters
-  _ <- ParserTest.testOptionalQueryParams
-  _ <- ParserTest.testRequiredQueryParams
-  _ <- HandleRouteTest.testParseQueryParams
+  _ <- Parsing.testOptionalQueryParams
+  _ <- Parsing.testRequiredQueryParams
+  _ <- HandleRoute.testParseQueryParams
 
   -- 4. Headers
-  _ <- RouteTest.testHeaderValueString
-  _ <- RouteTest.testHeaderValueInt
-  _ <- RouteTest.testHeaderValueMaybe
-  _ <- RouteTest.testRoundTrip
-  _ <- RouteTest.testBearerToken
-  _ <- RouteTest.testParseHeaders
+  _ <- Headers.testHeaderValueString
+  _ <- Headers.testHeaderValueInt
+  _ <- Headers.testHeaderValueMaybe
+  _ <- Headers.testRoundTrip
+  _ <- Headers.testBearerToken
+  _ <- Headers.testParseHeaders
 
   -- 5. Request Bodies
-  _ <- HandleRouteTest.testParseBody
-  _ <- RequestBodyTest.testRequestBodyToStrom
+  _ <- HandleRoute.testParseBody
+  _ <- RequestBody.testRequestBodyToStrom
 
   -- 6. Responses
-  _ <- VariantResponseTest.testStatusCodeMapping
-  _ <- VariantResponseTest.testStatusCodeToString
-  _ <- VariantResponseTest.testRespondNoHeaders
-  _ <- VariantResponseTest.testRespondWith
-  _ <- VariantResponseTest.testRespond
-  _ <- VariantResponseTest.testVariantPatternMatching
+  _ <- Responses.testStatusCodeMapping
+  _ <- Responses.testStatusCodeToString
+  _ <- Responses.testRespondNoHeaders
+  _ <- Responses.testRespondWith
+  _ <- Responses.testRespond
+  _ <- Responses.testVariantPatternMatching
 
   -- 7. Validation
-  _ <- MetadataValidationTest.testPatternValidation
-  _ <- MetadataValidationTest.testMinLengthValidation
-  _ <- MetadataValidationTest.testMaxLengthValidation
-  _ <- MetadataValidationTest.testMinimumValidation
-  _ <- MetadataValidationTest.testMaximumValidation
-  _ <- MetadataValidationTest.testComposedValidation
+  _ <- Validation.testPatternValidation
+  _ <- Validation.testMinLengthValidation
+  _ <- Validation.testMaxLengthValidation
+  _ <- Validation.testMinimumValidation
+  _ <- Validation.testMaximumValidation
+  _ <- Validation.testComposedValidation
 
   -- 8. OpenAPI Generation
-  _ <- RouteTest.testRenderMethod
-  _ <- RouteTest.testRenderHeadersSchema
-  _ <- RouteTest.testRenderResponseHeadersSchema
-  _ <- RouteTest.testRenderResponseSchema
-  _ <- RouteTest.testRenderPathParamsSchema
-  _ <- RouteTest.testRenderQueryParamsSchema
-  _ <- RouteTest.testRenderRequestBodySchema
-  _ <- RouteTest.testToOpenAPI
-  _ <- VariantResponseTest.testSimpleVariantOpenAPI
-  _ <- VariantResponseTest.testComplexVariantOpenAPI
-  _ <- VariantResponseTest.testVariantWithHeaders
+  _ <- Headers.testRenderMethod
+  _ <- Headers.testRenderHeadersSchema
+  _ <- Headers.testRenderResponseHeadersSchema
+  _ <- Headers.testRenderResponseSchema
+  _ <- Headers.testRenderPathParamsSchema
+  _ <- Headers.testRenderQueryParamsSchema
+  _ <- Headers.testRenderRequestBodySchema
+  _ <- Headers.testToOpenAPI
+  _ <- Responses.testSimpleVariantOpenAPI
+  _ <- Responses.testComplexVariantOpenAPI
+  _ <- Responses.testVariantWithHeaders
 
   -- 9. Full Server Integration
-  ServerIntegration.testServerCompilation
+  Integration.testServerCompilation
 
 main :: ViTest
 main = viTest spec

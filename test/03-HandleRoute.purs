@@ -1,4 +1,4 @@
-module HandleRouteTest.Spec where
+module Test.HandleRoute where
 
 import Prelude
 

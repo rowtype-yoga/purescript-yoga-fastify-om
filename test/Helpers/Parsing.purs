@@ -1,4 +1,4 @@
-module Test.ParserTest where
+module Test.Helpers.Parsing where
 
 import Prelude
 

@@ -1,4 +1,4 @@
-module RouteTest.Spec where
+module Test.Headers where
 
 import Prelude
 
