@@ -1,46 +1,12 @@
 workspace:
   packageSet:
-    registry: 51.1.0
+    registry: 73.0.0
   extraPackages:
-    yoga-om:
-      path: ../purescript-yoga-om
-    yoga-fastify:
-      path: ../purescript-yoga-fastify
-    yoga-http-api:
-      path: ../purescript-yoga-http-api
-    yoga-om-layer:
-      path: ../purescript-yoga-om-layer
-    yoga-om-strom:
-      path: ../purescript-yoga-om-strom
-    yoga-om-workerbees:
-      path: ../purescript-yoga-om-workerbees
-    node-workerbees:
-      git: https://github.com/natefaubion/purescript-node-workerbees.git
-      ref: v0.3.1
-      dependencies:
-        - aff
-        - argonaut-core
-        - effect
-        - either
-        - exceptions
-        - maybe
-        - newtype
-        - parallel
-        - prelude
-        - transformers
-        - unsafe-coerce
-    vitest:
-      path: ../purescript-vitest
-    # vitest:
-    #   git: https://github.com/rowtype-yoga/purescript-vitest.git
-    #   ref: v1.0.0
-    #   dependencies:
-    #     - effect
-    #     - prelude
-    #     - foldable-traversable
-    #     - maybe
-    #     - web-html
-
+    yoga-fastify: "0.2.0"
+    yoga-http-api: "0.1.0"
+    yoga-om-layer: "1.0.6"
+    yoga-om-strom: "0.2.0"
+    yoga-om: "1.2.2"
 package:
   name: yoga-fastify-om
   publish:
@@ -50,28 +16,26 @@ package:
       githubOwner: rowtype-yoga
       githubRepo: purescript-yoga-fastify-om
   dependencies:
-    - forgetmenot
-    - undefined-is-not-a-problem
-    - aff: ">=7.0.0 <8.0.0"
+    - aff: ">=8.0.0 <9.0.0"
     - effect: ">=4.0.0 <5.0.0"
-    - prelude: ">=6.0.0 <7.0.0"
-    - routing-duplex: ">=0.7.0 <0.8.0"
-    - strings: ">=6.0.0 <7.0.0"
-    - variant: ">=8.0.0 <9.0.0"
-    - yoga-fastify
-    - yoga-http-api
-    - yoga-json: ">=5.0.0 <6.0.0"
-    - yoga-om
-    - yoga-om-layer
-    - yoga-om-strom
+    - forgetmenot: ">=0.1.0 <0.2.0"
     - node-buffer: ">=9.0.0 <10.0.0"
-    - node-fs: ">=9.0.0 <10.0.0"
-    - node-path: ">=5.0.0 <6.0.0"
-    - node-process: ">=11.0.0 <12.0.0"
-    - node-streams: ">=9.0.0 <10.0.0"
+    - node-fs: ">=9.2.0 <10.0.0"
+    - node-path: ">=5.0.1 <6.0.0"
+    - node-process: ">=11.2.0 <12.0.0"
+    - node-streams: ">=9.0.1 <10.0.0"
     - parallel: ">=7.0.0 <8.0.0"
-    - node-workerbees
-    - yoga-om-workerbees
+    - prelude: ">=6.0.2 <7.0.0"
+    - routing-duplex: ">=0.7.0 <0.8.0"
+    - strings: ">=6.0.1 <7.0.0"
+    - undefined-is-not-a-problem: ">=1.1.0 <2.0.0"
+    - variant: ">=8.0.0 <9.0.0"
+    - yoga-fastify: ">=0.2.0 <0.3.0"
+    - yoga-http-api: ">=0.1.0 <0.2.0"
+    - yoga-json: ">=5.1.0 <6.0.0"
+    - yoga-om: ">=1.2.2 <2.0.0"
+    - yoga-om-layer: ">=1.0.6 <2.0.0"
+    - yoga-om-strom: ">=0.2.0 <0.3.0"
   test:
     main: Test.Main
     dependencies:
