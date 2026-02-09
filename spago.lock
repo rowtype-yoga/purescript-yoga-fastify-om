@@ -106,6 +106,15 @@
               "maybe": ">=6.0.0 <7.0.0"
             },
             {
+              "node-path": ">=5.0.0 <6.0.0"
+            },
+            {
+              "node-process": ">=11.0.0 <12.0.0"
+            },
+            {
+              "node-workerbees": ">=0.3.0 <0.4.0"
+            },
+            {
               "routing-duplex": ">=0.7.0 <0.8.0"
             },
             {
@@ -113,6 +122,9 @@
             },
             {
               "vitest": ">=1.0.0 <2.0.0"
+            },
+            {
+              "yoga-om-workerbees": ">=0.1.0 <0.2.0"
             }
           ]
         }
@@ -711,10 +723,37 @@
     },
     "extra_packages": {
       "yoga-fastify": "0.2.3",
-      "yoga-http-api": "0.1.4",
+      "yoga-http-api": {
+        "git": "https://github.com/rowtype-yoga/purescript-yoga-http-api.git",
+        "ref": "v0.1.6",
+        "dependencies": [
+          "aff",
+          "arrays",
+          "either",
+          "foldable-traversable",
+          "foreign",
+          "foreign-object",
+          "identity",
+          "integers",
+          "maybe",
+          "newtype",
+          "prelude",
+          "record",
+          "strings",
+          "tuples",
+          "undefined-is-not-a-problem",
+          "unsafe-coerce",
+          "variant",
+          "yoga-json",
+          "yoga-options"
+        ]
+      },
       "yoga-om": "1.2.2",
       "yoga-om-layer": "1.0.6",
       "yoga-om-strom": "0.2.0",
+      "yoga-om-workerbees": {
+        "path": "../purescript-yoga-om-workerbees"
+      },
       "yoga-options": "0.1.0"
     }
   },
@@ -748,6 +787,24 @@
         "foldable-traversable",
         "lists",
         "prelude"
+      ]
+    },
+    "argonaut-core": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-gYZihtBIKthVuXXoiPphMookSf8M5aHyFYkcIWqlxTM=",
+      "dependencies": [
+        "arrays",
+        "control",
+        "either",
+        "foreign-object",
+        "functions",
+        "gen",
+        "maybe",
+        "nonempty",
+        "prelude",
+        "strings",
+        "tailrec"
       ]
     },
     "arraybuffer-types": {
@@ -1293,6 +1350,90 @@
         "unsafe-coerce"
       ]
     },
+    "node-event-emitter": {
+      "type": "registry",
+      "version": "3.0.0",
+      "integrity": "sha256-wodx71NxJBPXOaawFn01V1ByYB2vT+I3RuV2giOVKMg=",
+      "dependencies": [
+        "effect",
+        "either",
+        "functions",
+        "maybe",
+        "nullable",
+        "prelude",
+        "unsafe-coerce"
+      ]
+    },
+    "node-path": {
+      "type": "registry",
+      "version": "5.0.1",
+      "integrity": "sha256-j7n/SmpVz0FOMJl4XZop3ofJ+MeIPkMNqUEUKHEL6Us=",
+      "dependencies": [
+        "effect"
+      ]
+    },
+    "node-process": {
+      "type": "registry",
+      "version": "11.2.0",
+      "integrity": "sha256-onzKeNmaeYfN3HSDPqSFTrrP2Yl9tnVsfKKhnf2plxM=",
+      "dependencies": [
+        "effect",
+        "exceptions",
+        "foreign",
+        "foreign-object",
+        "maybe",
+        "node-event-emitter",
+        "node-streams",
+        "nullable",
+        "posix-types",
+        "prelude",
+        "strings"
+      ]
+    },
+    "node-streams": {
+      "type": "registry",
+      "version": "9.0.1",
+      "integrity": "sha256-yuVGm/R/tBr4Nphi+a1a984Z0fkmN9Q5wWtSmbmJTpA=",
+      "dependencies": [
+        "aff",
+        "arrays",
+        "effect",
+        "either",
+        "exceptions",
+        "maybe",
+        "node-buffer",
+        "node-event-emitter",
+        "nullable",
+        "prelude",
+        "refs",
+        "st",
+        "tailrec",
+        "unsafe-coerce"
+      ]
+    },
+    "node-workerbees": {
+      "type": "registry",
+      "version": "0.3.1",
+      "integrity": "sha256-jpYs0T2IUsp1uT1OI4M38Nr63km1vdzfg8LxYj21JKQ=",
+      "dependencies": [
+        "aff",
+        "argonaut-core",
+        "arraybuffer-types",
+        "arrays",
+        "avar",
+        "effect",
+        "either",
+        "exceptions",
+        "foldable-traversable",
+        "foreign-object",
+        "newtype",
+        "parallel",
+        "prelude",
+        "transformers",
+        "tuples",
+        "variant"
+      ]
+    },
     "nonempty": {
       "type": "registry",
       "version": "7.0.0",
@@ -1409,6 +1550,16 @@
         "tailrec",
         "transformers",
         "tuples"
+      ]
+    },
+    "posix-types": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-Je5jG439F/SFO/IvVevZnWVxDIonrehlKuJkefP2lHE=",
+      "dependencies": [
+        "maybe",
+        "newtype",
+        "prelude"
       ]
     },
     "prelude": {
@@ -1844,9 +1995,9 @@
       ]
     },
     "yoga-http-api": {
-      "type": "registry",
-      "version": "0.1.4",
-      "integrity": "sha256-kFnDMt0KGsi+84RKgmLQEr9HB+XHOgCeLMsFatCeCiY=",
+      "type": "git",
+      "url": "https://github.com/rowtype-yoga/purescript-yoga-http-api.git",
+      "rev": "3af6cf6fef5a96a9404f46d35265b3696f6f3b78",
       "dependencies": [
         "aff",
         "arrays",
@@ -1979,6 +2130,32 @@
         "transformers",
         "tuples",
         "variant",
+        "yoga-om"
+      ]
+    },
+    "yoga-om-workerbees": {
+      "type": "local",
+      "path": "../purescript-yoga-om-workerbees",
+      "dependencies": [
+        "aff",
+        "arraybuffer-types",
+        "arrays",
+        "console",
+        "effect",
+        "either",
+        "exceptions",
+        "foldable-traversable",
+        "foreign-object",
+        "functions",
+        "maybe",
+        "node-workerbees",
+        "parallel",
+        "partial",
+        "prelude",
+        "strings",
+        "transformers",
+        "tuples",
+        "yoga-json",
         "yoga-om"
       ]
     },

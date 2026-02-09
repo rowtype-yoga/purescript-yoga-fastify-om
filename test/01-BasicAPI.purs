@@ -20,7 +20,7 @@ import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.Fastify.Om.API (registerAPI)
-import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respond, reject, buildOpenAPISpec', class HeaderValueType, BearerToken, Enum, class RenderJSONSchema, class HasEnum, enum)
+import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respond, reject, buildOpenAPISpec, class HeaderValueType, BearerToken, Enum, class RenderJSONSchema, class HasEnum, enum)
 import Yoga.HTTP.API.Route.OpenAPI (class CollectSchemas, class CollectSchemaNames)
 import Yoga.HTTP.API.Path (class ParseParam, parseParam, type (/), type (:), type (:?))
 import Yoga.JSON (class ReadForeign, class WriteForeign, writeJSON)
@@ -173,18 +173,9 @@ openapiHandler = handle do
   respond @"ok"
     $ writeJSON
     $
-      buildOpenAPISpec' @AllApiRoutes
+      buildOpenAPISpec @AllApiRoutes
         { title: "Example API"
         , version: "1.0.0"
-        }
-        { servers: Just
-            [ { url: "http://localhost:3000"
-              , description: Just "Local development server"
-              }
-            , { url: "https://api.example.com"
-              , description: Just "Production server"
-              }
-            ]
         }
 
 -- Server Setup

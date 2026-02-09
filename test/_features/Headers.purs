@@ -246,7 +246,7 @@ testRenderResponseSchema = describe "RenderResponseSchema" $ do
     expectToEqual "Successful response" result."200".description
     expectToBe true (FObject.isEmpty result."200".headers)
     -- Schema is now a full Foreign object with introspection, verify it contains "type"
-    let schemaStr = writeJSON result."200".content."application/json".schema
+    let schemaStr = writeJSON result."200".content
     expectToBe true (String.contains (String.Pattern "\"type\"") schemaStr)
 
   test "renders response with headers and introspected body schema" do
@@ -255,7 +255,7 @@ testRenderResponseSchema = describe "RenderResponseSchema" $ do
     expectToBe true (FObject.member "Location" result."200".headers)
     expectToBe true (FObject.member "X-Request-Id" result."200".headers)
     -- Schema is now a full Foreign object
-    let schemaStr = writeJSON result."200".content."application/json".schema
+    let schemaStr = writeJSON result."200".content
     expectToBe true (String.contains (String.Pattern "\"type\"") schemaStr)
 
 testRenderPathParamsSchema :: Effect ViTest
