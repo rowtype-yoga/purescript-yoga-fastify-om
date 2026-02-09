@@ -2,7 +2,7 @@ workspace:
   packageSet:
     registry: 73.0.0
   extraPackages:
-    yoga-fastify: "0.2.2"
+    yoga-fastify: "0.2.3"
     yoga-http-api: "0.1.4"
     yoga-om-layer: "1.0.6"
     yoga-om-strom: "0.2.0"
@@ -32,7 +32,7 @@ package:
     - strings: ">=6.0.1 <7.0.0"
     - undefined-is-not-a-problem: ">=1.1.0 <2.0.0"
     - variant: ">=8.0.0 <9.0.0"
-    - yoga-fastify: ">=0.2.2 <0.3.0"
+    - yoga-fastify: ">=0.2.3 <0.3.0"
     - yoga-http-api: ">=0.1.4 <0.2.0"
     - yoga-json: ">=5.1.0 <6.0.0"
     - yoga-om: ">=1.2.2 <2.0.0"
