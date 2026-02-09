@@ -8,42 +8,30 @@
             {
               "aff": ">=7.0.0 <9.0.0"
             },
+            "console",
             {
               "effect": ">=4.0.0 <5.0.0"
             },
-            {
-              "forgetmenot": ">=0.1.0 <0.2.0"
-            },
+            "either",
+            "exceptions",
+            "foldable-traversable",
+            "foreign",
+            "foreign-object",
+            "integers",
+            "maybe",
             {
               "node-buffer": ">=9.0.0 <10.0.0"
             },
             {
-              "node-fs": ">=9.2.0 <10.0.0"
-            },
-            {
-              "node-path": ">=5.0.1 <6.0.0"
-            },
-            {
-              "node-process": ">=11.2.0 <12.0.0"
-            },
-            {
-              "node-streams": ">=9.0.1 <10.0.0"
-            },
-            {
-              "parallel": ">=7.0.0 <8.0.0"
-            },
-            {
               "prelude": ">=6.0.2 <7.0.0"
             },
+            "record",
+            "refs",
             {
               "routing-duplex": ">=0.7.0 <0.8.0"
             },
-            {
-              "strings": ">=6.0.1 <7.0.0"
-            },
-            {
-              "undefined-is-not-a-problem": ">=1.1.0 <2.0.0"
-            },
+            "transformers",
+            "unsafe-coerce",
             {
               "variant": ">=8.0.0 <9.0.0"
             },
@@ -98,9 +86,6 @@
             },
             {
               "spec": ">=7.0.0 <8.0.0"
-            },
-            {
-              "strings": ">=6.0.0 <7.0.0"
             },
             {
               "vitest": ">=1.0.0 <2.0.0"
@@ -992,12 +977,6 @@
         "unsafe-coerce"
       ]
     },
-    "forgetmenot": {
-      "type": "registry",
-      "version": "0.1.0",
-      "integrity": "sha256-YYLWpHQwJ1zKmPxLo7sZOk+kYuKOpOpRhdz9vwI/p7Q=",
-      "dependencies": []
-    },
     "fork": {
       "type": "registry",
       "version": "6.0.0",
@@ -1290,91 +1269,6 @@
         "unsafe-coerce"
       ]
     },
-    "node-event-emitter": {
-      "type": "registry",
-      "version": "3.0.0",
-      "integrity": "sha256-wodx71NxJBPXOaawFn01V1ByYB2vT+I3RuV2giOVKMg=",
-      "dependencies": [
-        "effect",
-        "either",
-        "functions",
-        "maybe",
-        "nullable",
-        "prelude",
-        "unsafe-coerce"
-      ]
-    },
-    "node-fs": {
-      "type": "registry",
-      "version": "9.2.0",
-      "integrity": "sha256-fxioTSm9y47WuYs9F/7nxCh/RVDCl3Kr3Hg779J4SJA=",
-      "dependencies": [
-        "aff",
-        "datetime",
-        "effect",
-        "either",
-        "enums",
-        "exceptions",
-        "functions",
-        "integers",
-        "js-date",
-        "maybe",
-        "node-buffer",
-        "node-path",
-        "node-streams",
-        "nullable",
-        "partial",
-        "prelude",
-        "strings"
-      ]
-    },
-    "node-path": {
-      "type": "registry",
-      "version": "5.0.1",
-      "integrity": "sha256-j7n/SmpVz0FOMJl4XZop3ofJ+MeIPkMNqUEUKHEL6Us=",
-      "dependencies": [
-        "effect"
-      ]
-    },
-    "node-process": {
-      "type": "registry",
-      "version": "11.2.0",
-      "integrity": "sha256-onzKeNmaeYfN3HSDPqSFTrrP2Yl9tnVsfKKhnf2plxM=",
-      "dependencies": [
-        "effect",
-        "exceptions",
-        "foreign",
-        "foreign-object",
-        "maybe",
-        "node-event-emitter",
-        "node-streams",
-        "nullable",
-        "posix-types",
-        "prelude",
-        "strings"
-      ]
-    },
-    "node-streams": {
-      "type": "registry",
-      "version": "9.0.1",
-      "integrity": "sha256-yuVGm/R/tBr4Nphi+a1a984Z0fkmN9Q5wWtSmbmJTpA=",
-      "dependencies": [
-        "aff",
-        "arrays",
-        "effect",
-        "either",
-        "exceptions",
-        "maybe",
-        "node-buffer",
-        "node-event-emitter",
-        "nullable",
-        "prelude",
-        "refs",
-        "st",
-        "tailrec",
-        "unsafe-coerce"
-      ]
-    },
     "nonempty": {
       "type": "registry",
       "version": "7.0.0",
@@ -1491,16 +1385,6 @@
         "tailrec",
         "transformers",
         "tuples"
-      ]
-    },
-    "posix-types": {
-      "type": "registry",
-      "version": "6.0.0",
-      "integrity": "sha256-Je5jG439F/SFO/IvVevZnWVxDIonrehlKuJkefP2lHE=",
-      "dependencies": [
-        "maybe",
-        "newtype",
-        "prelude"
       ]
     },
     "prelude": {
