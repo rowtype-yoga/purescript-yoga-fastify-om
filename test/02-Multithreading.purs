@@ -5,7 +5,7 @@ import Prelude
 import Control.Monad.Reader.Trans (ask)
 import Control.Parallel (parTraverse)
 import Data.Array as Array
-import Data.Tuple.Nested (type (/\))
+
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
 import Effect.Class (liftEffect)
@@ -18,7 +18,8 @@ import Node.WorkerBees.Aff.Pool as Pool
 import Yoga.Fastify.Fastify (Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.HTTP.API.Path (type (/), type (:))
-import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respond, reject)
+import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, handle, respond, reject)
+import Yoga.Fastify.Om.API (registerAPI)
 import Yoga.Om as Om
 import Yoga.Om.WorkerBees (WorkerPool)
 
@@ -47,21 +48,21 @@ type FibRoute = Route GET
 
 type FibBatchRoute = Route POST
   ("fib" / "batch")
-  (Request { body :: JSON { numbers :: Array Int } })
+  (Request { body :: { numbers :: Array Int } })
   ( ok :: { body :: { results :: Array { n :: Int, result :: Int } } }
   , badRequest :: { body :: { error :: String } }
   )
 
 type HashRoute = Route POST
   "hash"
-  (Request { body :: JSON { text :: String, iterations :: Int } })
+  (Request { body :: { text :: String, iterations :: Int } })
   ( ok :: { body :: { hash :: String, length :: Int } }
   , badRequest :: { body :: { error :: String } }
   )
 
 type HashBatchRoute = Route POST
   ("hash" / "batch")
-  (Request { body :: JSON { inputs :: Array { text :: String, iterations :: Int } } })
+  (Request { body :: { inputs :: Array { text :: String, iterations :: Int } } })
   ( ok :: { body :: { results :: Array { hash :: String, length :: Int } } }
   , badRequest :: { body :: { error :: String } }
   )
@@ -76,11 +77,11 @@ type API =
 
 -- Handlers
 
-healthHandler :: Handler HealthRoute
+healthHandler :: Handler HealthRoute ()
 healthHandler = handle do
   respond @"ok" { status: "ok" }
 
-fibHandler :: WorkerPool FibInput FibOutput -> Handler FibRoute
+fibHandler :: WorkerPool FibInput FibOutput -> Handler FibRoute ()
 fibHandler pool = handle do
   { path } <- ask
   let n = path.n
@@ -91,7 +92,7 @@ fibHandler pool = handle do
   result <- Om.fromAff $ Pool.invoke pool { n }
   respond @"ok" { n, result: result.result }
 
-fibBatchHandler :: WorkerPool FibInput FibOutput -> Handler FibBatchRoute
+fibBatchHandler :: WorkerPool FibInput FibOutput -> Handler FibBatchRoute ()
 fibBatchHandler pool = handle do
   { body } <- ask
   let numbers = body.numbers
@@ -106,7 +107,7 @@ fibBatchHandler pool = handle do
   let results = Array.zipWith (\n output -> { n, result: output.result }) numbers outputs
   respond @"ok" { results }
 
-hashHandler :: WorkerPool HashInput HashOutput -> Handler HashRoute
+hashHandler :: WorkerPool HashInput HashOutput -> Handler HashRoute ()
 hashHandler pool = handle do
   { body } <- ask
   when (body.iterations < 1) do
@@ -116,7 +117,7 @@ hashHandler pool = handle do
   result <- Om.fromAff $ Pool.invoke pool { text: body.text, iterations: body.iterations }
   respond @"ok" result
 
-hashBatchHandler :: WorkerPool HashInput HashOutput -> Handler HashBatchRoute
+hashBatchHandler :: WorkerPool HashInput HashOutput -> Handler HashBatchRoute ()
 hashBatchHandler pool = handle do
   { body } <- ask
   let inputs = body.inputs
@@ -150,11 +151,14 @@ startServer = do
 
   app <- liftEffect $ F.fastify {}
 
-  liftEffect $ handleRoute healthHandler app
-  liftEffect $ handleRoute (fibHandler fibPool) app
-  liftEffect $ handleRoute (fibBatchHandler fibPool) app
-  liftEffect $ handleRoute (hashHandler hashPool) app
-  liftEffect $ handleRoute (hashBatchHandler hashPool) app
+  liftEffect $ registerAPI
+    { health: healthHandler
+    , fib: fibHandler fibPool
+    , fibBatch: fibBatchHandler fibPool
+    , hash: hashHandler hashPool
+    , hashBatch: hashBatchHandler hashPool
+    }
+    app
 
   let port = 3000
   liftEffect $ Console.log $ "Server starting on port " <> show port

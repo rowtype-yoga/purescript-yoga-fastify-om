@@ -2,41 +2,26 @@ workspace:
   packageSet:
     registry: 73.0.0
   extraPackages:
-    yoga-fastify: "0.2.3"
+    yoga-fastify:
+      path: ../purescript-yoga-fastify
     yoga-http-api:
-      git: https://github.com/rowtype-yoga/purescript-yoga-http-api.git
-      ref: v0.1.6
-      dependencies:
-        - aff
-        - arrays
-        - either
-        - foldable-traversable
-        - foreign
-        - foreign-object
-        - identity
-        - integers
-        - maybe
-        - newtype
-        - prelude
-        - record
-        - strings
-        - tuples
-        - undefined-is-not-a-problem
-        - unsafe-coerce
-        - variant
-        - yoga-json
-        - yoga-options
-    yoga-om-layer: "1.0.6"
-    yoga-om-strom: "0.2.0"
-    yoga-om: "1.2.2"
+      path: ../purescript-yoga-http-api
+    yoga-om-layer:
+      path: ../purescript-yoga-om-layer
+    yoga-om-strom:
+      path: ../purescript-yoga-om-strom
+    yoga-om:
+      path: ../purescript-yoga-om
     yoga-om-workerbees:
       path: ../purescript-yoga-om-workerbees
     yoga-options: "0.1.0"
+    ref-lifted:
+      path: ../purescript-ref-lifted
 
 package:
   name: yoga-fastify-om
   publish:
-    version: 0.2.0
+    version: 0.3.0
     license: MIT
     location:
       githubOwner: rowtype-yoga
@@ -54,17 +39,18 @@ package:
     - node-buffer: ">=9.0.0 <10.0.0"
     - prelude: ">=6.0.2 <7.0.0"
     - record: ">=4.0.0 <5.0.0"
+    - ref-lifted: ">=0.0.1 <1.0.0"
     - refs: ">=6.0.0 <7.0.0"
     - routing-duplex: ">=0.7.0 <0.8.0"
     - transformers: ">=6.1.0 <7.0.0"
     - unsafe-coerce: ">=6.0.0 <7.0.0"
     - variant: ">=8.0.0 <9.0.0"
-    - yoga-fastify: ">=0.2.3 <0.3.0"
-    - yoga-http-api: ">=0.1.4 <0.2.0"
+    - yoga-fastify: ">=0.2.3 <0.4.0"
+    - yoga-http-api: ">=0.1.4 <0.3.0"
     - yoga-json: ">=5.1.0 <6.0.0"
     - yoga-om: ">=1.2.2 <2.0.0"
     - yoga-om-layer: ">=1.0.6 <2.0.0"
-    - yoga-om-strom: ">=0.2.0 <0.3.0"
+    - yoga-om-strom: ">=0.2.0 <0.5.0"
   test:
     main: Test.Main
     dependencies:

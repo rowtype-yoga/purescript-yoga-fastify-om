@@ -1,11 +1,13 @@
 module Yoga.Fastify.Om.Route.OmHandler
   ( handle
+  , Handler(..)
   , respond
   , respondWith
   , respondNoContent
   , respondNotModified
   , reject
   , rejectWith
+  , mapReject
   , class ToLabel
   , class Is2xxStatus
   , class SplitResponse
@@ -13,13 +15,14 @@ module Yoga.Fastify.Om.Route.OmHandler
   , class SplitResponseEntry
   , class BuildErrorHandlers
   , buildErrorHandlers
+  , class RouteResponseVariant
   ) where
 
 import Prelude
 
 import Control.Monad.Error.Class (throwError)
 import Data.Symbol (class IsSymbol)
-import Data.Variant (class VariantMatchCases, Variant)
+import Data.Variant (Variant)
 import Data.Variant as Variant
 import Effect.Aff as Aff
 import Effect.Exception (Error)
@@ -31,7 +34,10 @@ import Record.Builder as Builder
 import Type.Proxy (Proxy(..))
 import Yoga.HTTP.API.Route.Response (Response(..))
 import Yoga.HTTP.API.Route.StatusCode (class StatusCodeToLabel)
-import Yoga.HTTP.API.Route.RouteHandler (Handler, class RouteHandler, mkHandler)
+import Yoga.HTTP.API.Route.Route (Route, class ConvertResponseVariant)
+import Yoga.HTTP.API.Route.RouteHandler (class RouteHandler)
+import Yoga.HTTP.API.Route.RouteHandler as Internal
+import Unsafe.Coerce (unsafeCoerce)
 import Yoga.Om (Om, handleErrors', runOm)
 
 -- | Convert either a status code (Int) or label (Symbol) to a label (Symbol).
@@ -178,10 +184,6 @@ respondWith headers body =
 -- | ```purescript
 -- | respondNoContent
 -- | ```
--- respondNoContent
---   :: forall r1 r2 ctx err
---    . Row.Cons "noContent" (Response () Unit) r1 r2
---   => Om ctx err (Variant r2)
 respondNoContent
   :: forall ctx err r
    . Om ctx err (Variant (noContent :: Response () Unit | r))
@@ -239,67 +241,86 @@ rejectWith
 rejectWith headers body =
   throwError (Variant.inj (Proxy :: Proxy label) (Response { headers, body }))
 
+mapReject
+  :: forall @from @toLabelOrCode toLabel tyIn body ctx errIn errMid errOut a
+   . IsSymbol from
+  => ToLabel (Proxy toLabelOrCode) toLabel
+  => IsSymbol toLabel
+  => Row.Cons from tyIn (exception :: Error | errMid) (exception :: Error | errIn)
+  => Row.Cons toLabel (Response () body) (exception :: Error | errMid) (exception :: Error | errOut)
+  => (tyIn -> body)
+  -> Om ctx errIn a
+  -> Om ctx errOut a
+mapReject f = handleErrors' \variant ->
+  variant # Variant.on (Proxy :: Proxy from)
+    (\v -> throwError (Variant.inj (Proxy :: Proxy toLabel) (Response { headers: {}, body: f v })))
+    (throwError <<< unsafeCoerce)
+
+-- | A handler with deferred dependency injection.
+-- | The `ctx` row tracks what extra dependencies are needed beyond the request.
+-- | Use `handle` to create one, and `registerAPILayer` to provide the deps.
+newtype Handler route (ctx :: Row Type) = Handler (Record ctx -> Internal.Handler route)
+
 -- | Create a `Handler` from an Om computation.
 -- |
--- | The Om computation receives the request as context (via `ask`),
--- | can short-circuit with non-2xx responses (via `throw`),
--- | and returns a 2xx response on the happy path.
+-- | The Om computation receives the request context (path, query, headers, body)
+-- | plus any extra dependencies via `ask`. Request field types are verified
+-- | against the route at compile time.
 -- |
 -- | Example:
 -- | ```purescript
--- | userHandler :: Handler UserRoute
--- | userHandler = handle do
--- |   { path } <- ask
--- |   when (path.id /= 1) $
--- |     throw { notFound: respondNoHeaders @"notFound" { error: "User not found" } }
--- |   pure $ respondNoHeaders @"ok" { id: 1, name: "Alice", email: "alice@example.com" }
+-- | putUserHandler :: Handler PutUser (userRepo :: UserRepo)
+-- | putUserHandler = handle do
+-- |   { path, body, userRepo } <- ask
+-- |   existing <- userRepo.findByName path.name # liftAff
+-- |   case existing of
+-- |     Just user -> respond @"ok" user
+-- |     Nothing -> do
+-- |       user <- userRepo.create path.name body.email # liftAff
+-- |       respond @"created" user
 -- | ```
 handle
-  :: forall route pathParams queryParams reqHeaders body respVariant
-       successRow errorRow errorRL
-       handlersRow handlersRL handled
+  :: forall @route pathParams queryParams reqHeaders body respVariant
+       successRow errorRow extraCtx
    . RouteHandler route pathParams queryParams reqHeaders body respVariant
-  -- Split response into success/error
   => SplitResponse respVariant successRow errorRow
-  -- Expand success sub-variant into full variant
-  => Row.Union successRow errorRow respVariant
-  -- Build error handlers record
-  => RL.RowToList errorRow errorRL
-  => BuildErrorHandlers errorRL respVariant handlersRow
-  -- onMatch constraints for the error variant handler
-  => RL.RowToList handlersRow handlersRL
-  => VariantMatchCases handlersRL handled
-       ( Om
-           { path :: Record pathParams
-           , query :: Record queryParams
-           , headers :: Record reqHeaders
-           , body :: body
-           }
-           ()
-           (Variant respVariant)
-       )
-  => Row.Union handled (exception :: Error) (exception :: Error | errorRow)
-  -- respondNow support
   => Row.Lacks "_respondNow" errorRow
+  => Row.Lacks "path" extraCtx
+  => Row.Lacks "query" extraCtx
+  => Row.Lacks "headers" extraCtx
+  => Row.Lacks "body" extraCtx
   => Om
        { path :: Record pathParams
        , query :: Record queryParams
        , headers :: Record reqHeaders
        , body :: body
+       | extraCtx
        }
        (_respondNow :: Variant successRow | errorRow)
        (Variant successRow)
-  -> Handler route
-handle om = mkHandler \ctx ->
+  -> Handler route extraCtx
+handle om = Handler \deps -> unsafeCoerce \requestCtx -> do
+  let ctx = unsafeMerge deps requestCtx
   runOm ctx { exception: Aff.throwError } $
-    handleErrors' errorHandler (Variant.expand <$> om')
+    handleErrors' errorHandler (unsafeExpandVariant <$> om')
   where
   om' = handleErrors' respondNowHandler om
   respondNowHandler = Variant.on (Proxy :: Proxy "_respondNow") pure throwError
-  errorHandler errVariant =
-    Variant.onMatch
-      ( Builder.buildFromScratch
-          (buildErrorHandlers (Proxy :: Proxy errorRL) (Proxy :: Proxy respVariant))
-      )
-      throwError
-      errVariant
+  errorHandler = Variant.on (Proxy :: Proxy "exception")
+    (throwError <<< Variant.inj (Proxy :: Proxy "exception"))
+    (pure <<< unsafeExpandVariant)
+
+class RouteResponseVariant (route :: Type) (respVariant :: Row Type) | route -> respVariant
+
+instance
+  ( ConvertResponseVariant userResp respVariant
+  ) =>
+  RouteResponseVariant (Route method segments request userResp) respVariant
+
+foreign import unsafeMergeImpl :: forall a b. a -> b -> a
+
+unsafeMerge :: forall a b c. Record a -> Record b -> Record c
+unsafeMerge a b = unsafeCoerce (unsafeMergeImpl a b)
+
+unsafeExpandVariant :: forall a b. Variant a -> Variant b
+unsafeExpandVariant = unsafeCoerce

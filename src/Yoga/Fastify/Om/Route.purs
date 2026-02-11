@@ -7,7 +7,6 @@ module Yoga.Fastify.Om.Route
   , module Yoga.HTTP.API.Route.RenderMethod
   , module Yoga.HTTP.API.Route.OpenAPI
   , module Yoga.HTTP.API.Route.OpenAPIMetadata
-  , module Yoga.HTTP.API.Route.RouteHandler
   , module Yoga.HTTP.API.Route.Handler
   , module Yoga.HTTP.API.Route.Encoding
   , module Yoga.HTTP.API.Route.StatusCode
@@ -20,6 +19,7 @@ module Yoga.Fastify.Om.Route
   , module Yoga.Fastify.Route.ParseBody
   , module Yoga.HTTP.API.Route.Route
   , module Yoga.Fastify.Om.Route.OmHandler
+  , module Yoga.Om
   , module Data.Variant
   ) where
 
@@ -28,7 +28,6 @@ import Yoga.HTTP.API.Route.BearerToken (BearerToken(..))
 import Yoga.HTTP.API.Route.Encoding (JSON, FormData, NoBody)
 import Yoga.Fastify.Route.HandleResponse (class HandleResponse, handleResponse)
 import Yoga.Fastify.Route.HandleRoute (handleRoute)
-import Yoga.HTTP.API.Route.RouteHandler (Handler, class RouteHandler, mkHandler, runHandler)
 import Yoga.HTTP.API.Route.Handler (HandlerFn, Request, class SegmentPathParams, class SegmentQueryParams, class SegmentQueryParamsRL, class EncodingBody, class CaptureParams, class RequestHeaders, class RequestBody)
 import Yoga.HTTP.API.Route.HeaderError (HeaderError(..))
 import Yoga.HTTP.API.Route.HeaderValue (class HeaderValue, class HeaderValueType, headerValueType, parseHeader, printHeader)
@@ -43,5 +42,6 @@ import Yoga.HTTP.API.Route.RenderMethod (class RenderMethod, renderMethod)
 import Yoga.HTTP.API.Route.Response (Response(..), ResponseData, respondNoHeaders)
 import Yoga.HTTP.API.Route.Route (Route(..), class ConvertResponseVariant, class ConvertResponseVariantRL)
 import Yoga.Fastify.Route.SetHeaders (class SetHeaders, setHeaders)
-import Yoga.Fastify.Om.Route.OmHandler (handle, respond, respondWith, respondNoContent, respondNotModified, reject, rejectWith, class ToLabel, class Is2xxStatus, class SplitResponse, class SplitResponseRL, class SplitResponseEntry, class BuildErrorHandlers, buildErrorHandlers)
+import Yoga.Fastify.Om.Route.OmHandler (handle, Handler(..), respond, respondWith, respondNoContent, respondNotModified, reject, rejectWith, mapReject, class ToLabel, class Is2xxStatus, class SplitResponse, class SplitResponseRL, class SplitResponseEntry, class BuildErrorHandlers, buildErrorHandlers, class RouteResponseVariant)
+import Yoga.Om (onError, mapError)
 import Yoga.HTTP.API.Route.StatusCode (class StatusCodeMap, statusCodeFor, statusCodeToString)

@@ -27,7 +27,7 @@ type FastifyL r = (fastify :: Fastify | r)
 -- | Create a Fastify layer that provides Fastify server as a service
 -- | Requires FastifyConfig in context
 -- | Note: This creates the server but doesn't start listening - use fastifyServerLayer for that
-fastifyLayer :: forall r. OmLayer (fastifyConfig :: FastifyConfig | r) (FastifyL ()) ()
+fastifyLayer :: forall r. OmLayer (fastifyConfig :: FastifyConfig | r) () (Record (FastifyL ()))
 fastifyLayer = makeLayer do
   { fastifyConfig } <- Om.ask
   app <- liftEffect $ F.fastify { logger: false }
@@ -40,7 +40,7 @@ fastifyLayer = makeLayer do
 fastifyLayer'
   :: forall r
    . FastifyConfig
-  -> OmLayer r (FastifyL ()) ()
+  -> OmLayer r () (Record (FastifyL ()))
 fastifyLayer' config = makeLayer do
   app <- liftEffect $ F.fastify { logger: false }
   liftEffect $ Console.log $
@@ -53,7 +53,7 @@ type FastifyServerL r = (fastifyServer :: String | r)
 
 fastifyServerLayer
   :: forall r
-   . OmLayer (fastifyConfig :: FastifyConfig, fastify :: Fastify | r) (FastifyServerL ()) ()
+   . OmLayer (fastifyConfig :: FastifyConfig, fastify :: Fastify | r) () (Record (FastifyServerL ()))
 fastifyServerLayer = makeLayer do
   { fastifyConfig, fastify } <- Om.ask
   address <- liftAff $ F.listen

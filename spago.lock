@@ -21,9 +21,6 @@
               "exceptions": ">=6.1.0 <7.0.0"
             },
             {
-              "foldable-traversable": ">=6.0.0 <7.0.0"
-            },
-            {
               "foreign": ">=7.0.0 <8.0.0"
             },
             {
@@ -45,6 +42,9 @@
               "record": ">=4.0.0 <5.0.0"
             },
             {
+              "ref-lifted": ">=0.0.1 <1.0.0"
+            },
+            {
               "refs": ">=6.0.0 <7.0.0"
             },
             {
@@ -60,10 +60,10 @@
               "variant": ">=8.0.0 <9.0.0"
             },
             {
-              "yoga-fastify": ">=0.2.3 <0.3.0"
+              "yoga-fastify": ">=0.2.3 <0.4.0"
             },
             {
-              "yoga-http-api": ">=0.1.4 <0.2.0"
+              "yoga-http-api": ">=0.1.4 <0.3.0"
             },
             {
               "yoga-json": ">=5.1.0 <6.0.0"
@@ -75,7 +75,7 @@
               "yoga-om-layer": ">=1.0.6 <2.0.0"
             },
             {
-              "yoga-om-strom": ">=0.2.0 <0.3.0"
+              "yoga-om-strom": ">=0.2.0 <0.5.0"
             }
           ]
         },
@@ -722,35 +722,24 @@
       }
     },
     "extra_packages": {
-      "yoga-fastify": "0.2.3",
-      "yoga-http-api": {
-        "git": "https://github.com/rowtype-yoga/purescript-yoga-http-api.git",
-        "ref": "v0.1.6",
-        "dependencies": [
-          "aff",
-          "arrays",
-          "either",
-          "foldable-traversable",
-          "foreign",
-          "foreign-object",
-          "identity",
-          "integers",
-          "maybe",
-          "newtype",
-          "prelude",
-          "record",
-          "strings",
-          "tuples",
-          "undefined-is-not-a-problem",
-          "unsafe-coerce",
-          "variant",
-          "yoga-json",
-          "yoga-options"
-        ]
+      "ref-lifted": {
+        "path": "../purescript-ref-lifted"
       },
-      "yoga-om": "1.2.2",
-      "yoga-om-layer": "1.0.6",
-      "yoga-om-strom": "0.2.0",
+      "yoga-fastify": {
+        "path": "../purescript-yoga-fastify"
+      },
+      "yoga-http-api": {
+        "path": "../purescript-yoga-http-api"
+      },
+      "yoga-om": {
+        "path": "../purescript-yoga-om"
+      },
+      "yoga-om-layer": {
+        "path": "../purescript-yoga-om-layer"
+      },
+      "yoga-om-strom": {
+        "path": "../purescript-yoga-om-strom"
+      },
       "yoga-om-workerbees": {
         "path": "../purescript-yoga-om-workerbees"
       },
@@ -777,6 +766,26 @@
         "tailrec",
         "transformers",
         "unsafe-coerce"
+      ]
+    },
+    "aff-retry": {
+      "type": "registry",
+      "version": "2.0.0",
+      "integrity": "sha256-rKZNcP4IKSyBFQBVzrCvE0ULoJt0N/uDLLJ0dPotr4k=",
+      "dependencies": [
+        "aff",
+        "arrays",
+        "datetime",
+        "effect",
+        "either",
+        "exceptions",
+        "integers",
+        "maybe",
+        "newtype",
+        "numbers",
+        "prelude",
+        "random",
+        "transformers"
       ]
     },
     "ansi": {
@@ -1583,6 +1592,16 @@
         "tuples"
       ]
     },
+    "random": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-7sZRo6P9UIiXDZ9s2QL9T8h3wlIwLdQrR4+oZKOijQw=",
+      "dependencies": [
+        "effect",
+        "integers",
+        "prelude"
+      ]
+    },
     "record": {
       "type": "registry",
       "version": "4.0.0",
@@ -1604,6 +1623,15 @@
         "record",
         "typelevel-prelude",
         "unsafe-coerce"
+      ]
+    },
+    "ref-lifted": {
+      "type": "local",
+      "path": "../purescript-ref-lifted",
+      "dependencies": [
+        "effect",
+        "prelude",
+        "refs"
       ]
     },
     "refs": {
@@ -1968,9 +1996,8 @@
       ]
     },
     "yoga-fastify": {
-      "type": "registry",
-      "version": "0.2.3",
-      "integrity": "sha256-150ocqfhYCc38HeChWbJXie0wn2bjKpORkZFQCRxICo=",
+      "type": "local",
+      "path": "../purescript-yoga-fastify",
       "dependencies": [
         "aff",
         "arrays",
@@ -1995,9 +2022,8 @@
       ]
     },
     "yoga-http-api": {
-      "type": "git",
-      "url": "https://github.com/rowtype-yoga/purescript-yoga-http-api.git",
-      "rev": "3af6cf6fef5a96a9404f46d35265b3696f6f3b78",
+      "type": "local",
+      "path": "../purescript-yoga-http-api",
       "dependencies": [
         "aff",
         "arrays",
@@ -2059,11 +2085,11 @@
       ]
     },
     "yoga-om": {
-      "type": "registry",
-      "version": "1.2.2",
-      "integrity": "sha256-uDV3/o8mUOTIgSEQFqIATPyladzL8BcjURvfS901hgI=",
+      "type": "local",
+      "path": "../purescript-yoga-om",
       "dependencies": [
         "aff",
+        "aff-retry",
         "avar",
         "console",
         "control",
@@ -2078,6 +2104,8 @@
         "prelude",
         "record",
         "record-studio",
+        "ref-lifted",
+        "refs",
         "tailrec",
         "transformers",
         "tuples",
@@ -2088,24 +2116,35 @@
       ]
     },
     "yoga-om-layer": {
-      "type": "registry",
-      "version": "1.0.6",
-      "integrity": "sha256-RrCaTvkiMwCFarWKbu0Dkq+yFz4hDM7x18gZok2OxV4=",
+      "type": "local",
+      "path": "../purescript-yoga-om-layer",
       "dependencies": [
         "aff",
-        "newtype",
+        "aff-retry",
+        "arrays",
+        "effect",
+        "exceptions",
+        "foldable-traversable",
+        "maybe",
+        "nullable",
+        "ordered-collections",
+        "parallel",
         "prelude",
         "record",
         "record-studio",
+        "ref-lifted",
+        "refs",
+        "transformers",
         "type-equality",
+        "typelevel-prelude",
         "unsafe-coerce",
+        "variant",
         "yoga-om"
       ]
     },
     "yoga-om-strom": {
-      "type": "registry",
-      "version": "0.2.0",
-      "integrity": "sha256-WMrhLQ71RFObD4Vv/X5qef+uIkJ4zgCv/K8l986g1wE=",
+      "type": "local",
+      "path": "../purescript-yoga-om-strom",
       "dependencies": [
         "aff",
         "arrays",
@@ -2123,6 +2162,7 @@
         "maybe",
         "now",
         "prelude",
+        "ref-lifted",
         "refs",
         "spec",
         "st",

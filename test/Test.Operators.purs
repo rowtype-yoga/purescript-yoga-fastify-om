@@ -9,6 +9,7 @@ import Test.Features.Headers as Headers
 import Test.Features.RequestBody as RequestBody
 import Test.Features.Responses as Responses
 import Test.Features.Validation as Validation
+import Test.Features.ErrorHandling as ErrorHandling
 import Test.Internal.Rendering as Rendering
 
 spec :: Effect ViTest
@@ -52,6 +53,10 @@ spec = do
   _ <- Validation.testMinimumValidation
   _ <- Validation.testMaximumValidation
   _ <- Validation.testComposedValidation
+
+  -- 7. Error Handling (onError, mapError)
+  _ <- ErrorHandling.testOnError
+  _ <- ErrorHandling.testMapError
 
   -- Internal: OpenAPI Generation
   _ <- Rendering.testRendering

@@ -9,7 +9,7 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..))
-import Data.Tuple.Nested (type (/\))
+
 import Effect (Effect)
 import Effect.Aff as Aff
 import Effect.Class (liftEffect)
@@ -20,7 +20,7 @@ import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.Fastify.Om.API (registerAPI)
-import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, JSON, handleRoute, handle, respond, reject, buildOpenAPISpec, class HeaderValueType, BearerToken, Enum, class RenderJSONSchema, class HasEnum, enum)
+import Yoga.Fastify.Om.Route (GET, POST, Route, Request, Handler, handle, respond, reject, buildOpenAPISpec, class HeaderValueType, BearerToken, Enum, class RenderJSONSchema, class HasEnum, enum)
 import Yoga.HTTP.API.Route.OpenAPI (class CollectSchemas, class CollectSchemaNames)
 import Yoga.HTTP.API.Path (class ParseParam, parseParam, type (/), type (:), type (:?))
 import Yoga.JSON (class ReadForeign, class WriteForeign, writeJSON)
@@ -59,7 +59,7 @@ type HealthRoute = Route GET "health"
   , notFound :: { body :: ErrorResponse }
   )
 
-healthHandler :: Handler HealthRoute
+healthHandler :: Handler HealthRoute ()
 healthHandler = handle do
   respond @"ok" { status: "healthy" }
 
@@ -96,7 +96,7 @@ type UserRoute = Route GET
   , unauthorized :: { body :: ErrorResponse }
   )
 
-userHandler :: Handler UserRoute
+userHandler :: Handler UserRoute ()
 userHandler = handle do
   { path } <- ask
 
@@ -117,7 +117,7 @@ type UsersWithLimitRoute = Route GET
   ( ok :: { body :: { users :: Array User, limit :: Maybe Int } }
   )
 
-usersWithLimitHandler :: Handler UsersWithLimitRoute
+usersWithLimitHandler :: Handler UsersWithLimitRoute ()
 usersWithLimitHandler = handle do
   { query } <- ask
   respond @"ok"
@@ -133,7 +133,7 @@ type CreateUserRoute = Route POST
   "users"
   ( Request
       { headers :: { authorization :: BearerToken }
-      , body :: JSON CreateUserRequest
+      , body :: CreateUserRequest
       }
   )
   ( created :: { body :: User }
@@ -141,7 +141,7 @@ type CreateUserRoute = Route POST
   , unauthorized :: { body :: ErrorResponse }
   )
 
-createUserHandler :: Handler CreateUserRoute
+createUserHandler :: Handler CreateUserRoute ()
 createUserHandler = handle do
   { body } <- ask
   when (body.name == "") do
@@ -168,7 +168,7 @@ type AllApiRoutes =
   , createUser :: CreateUserRoute
   }
 
-openapiHandler :: Handler OpenAPIRoute
+openapiHandler :: Handler OpenAPIRoute ()
 openapiHandler = handle do
   respond @"ok"
     $ writeJSON
@@ -184,7 +184,6 @@ createServer :: Effect Fastify
 createServer = do
   fastify <- F.fastify {}
 
-  -- Register API routes
   registerAPI
     { health: healthHandler
     , user: userHandler

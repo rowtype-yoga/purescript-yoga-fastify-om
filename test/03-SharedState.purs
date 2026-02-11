@@ -3,7 +3,7 @@ module Test.SharedState where
 import Prelude
 
 import Control.Monad.Reader.Trans (ask)
-import Data.Tuple.Nested (type (/\))
+
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
 import Effect.Class (liftEffect)
@@ -15,7 +15,8 @@ import Node.WorkerBees.Aff.Pool as Pool
 import Yoga.Fastify.Fastify (Host(..), Port(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.HTTP.API.Path (type (/), type (:))
-import Yoga.Fastify.Om.Route (GET, Route, Request, Handler, handleRoute, handle, respond, reject)
+import Yoga.Fastify.Om.Route (GET, Route, Request, Handler, handle, respond, reject)
+import Yoga.Fastify.Om.API (registerAPI)
 import Yoga.Om as Om
 import Yoga.Om.WorkerBees.SharedInt as SharedInt
 
@@ -46,7 +47,7 @@ type API =
 
 -- Handlers
 
-fibHandler :: Pool.WorkerPool CounterInput CounterOutput -> Handler FibRoute
+fibHandler :: Pool.WorkerPool CounterInput CounterOutput -> Handler FibRoute ()
 fibHandler pool = handle do
   { path } <- ask
   let n = path.n
@@ -57,7 +58,7 @@ fibHandler pool = handle do
   output <- Om.fromAff $ Pool.invoke pool { n }
   respond @"ok" { n, result: output.result, totalProcessed: output.count }
 
-countHandler :: SharedInt.SharedInt -> Handler CountRoute
+countHandler :: SharedInt.SharedInt -> Handler CountRoute ()
 countHandler counter = handle do
   totalProcessed <- Om.fromAff $ liftEffect $ SharedInt.read counter
   respond @"ok" { totalProcessed }
@@ -79,8 +80,11 @@ startServer = do
   liftEffect $ Console.log "Worker pool started (4 workers with shared counter)"
 
   app <- liftEffect $ F.fastify {}
-  liftEffect $ handleRoute (fibHandler pool) app
-  liftEffect $ handleRoute (countHandler counter) app
+  liftEffect $ registerAPI
+    { fib: fibHandler pool
+    , count: countHandler counter
+    }
+    app
 
   let port = 3001
   liftEffect $ Console.log $ "  curl http://localhost:" <> show port <> "/fib/30"

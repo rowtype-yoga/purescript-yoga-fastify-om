@@ -27,24 +27,48 @@ Each example is a complete, working server demonstrating real-world patterns.
 ## Quick Start
 
 ```purescript
-import Yoga.Fastify.Om.Route (GET, Route, Request, Handler, handle, respond, handleRoute)
-
--- Define a route
-type HealthRoute = Route GET "health"
-  (Request {})
-  ( ok :: { body :: { status :: String } }
+-- PUT /users/:name
+type PutUser = Route PUT
+  ("users" / "name" : String)
+  { body :: JSON { email :: String } }
+  ( ok :: { body :: User }
+  , created :: { body :: User }
   )
 
--- Implement the handler
-healthHandler :: Handler HealthRoute
-healthHandler = handle do
-  respond { ok: { status: "healthy" } }
+-- GET /users?limit=10
+type ListUsers = Route GET
+  ("users" :? { limit :: Int })
+  {}
+  ( ok :: { body :: Array User } )
 
--- Register with Fastify
-main = do
-  fastify <- F.fastify {}
-  handleRoute healthHandler fastify
-  F.listen { port: Port 3000, host: Host "0.0.0.0" } fastify
+type API =
+  { putUser :: PutUser
+  , listUsers :: ListUsers
+  }
+
+-- Handlers declare their dependencies via the Om context
+putUserHandler :: Handler PutUser (userRepo :: UserRepo)
+putUserHandler = handle do
+  { path, body, userRepo } <- ask
+  existing <- userRepo.findByName path.name # liftAff
+  case existing of
+    Just user -> respond @"ok" user
+    Nothing -> do
+      user <- userRepo.create path.name body.email # liftAff
+      respond @"created" user
+
+listUsersHandler :: Handler ListUsers (userRepo :: UserRepo)
+listUsersHandler = handle do
+  { query, userRepo } <- ask
+  users <- userRepo.list query.limit # liftAff
+  respond @"ok" users
+
+-- Dependencies are provided via the layer's context
+apiLayer :: OmLayer (fastify :: Fastify, userRepo :: UserRepo) () ()
+apiLayer = registerAPILayer @API
+  { putUser: putUserHandler
+  , listUsers: listUsersHandler
+  }
 ```
 
 ## Installation
