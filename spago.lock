@@ -132,7 +132,7 @@
     },
     "package_set": {
       "address": {
-        "registry": "73.0.0"
+        "registry": "73.2.0"
       },
       "compiler": ">=0.15.15 <0.16.0",
       "content": {
@@ -471,7 +471,7 @@
         "options": "7.0.0",
         "optparse": "5.0.1",
         "ordered-collections": "3.2.0",
-        "ordered-set": "0.4.0",
+        "ordered-set": "0.5.0",
         "orders": "6.0.0",
         "org-doc": "0.1.0",
         "owoify": "1.2.0",
@@ -562,6 +562,7 @@
         "selective-functors": "1.0.1",
         "semirings": "7.0.0",
         "shuffle": "2.0.0",
+        "sigil": "0.2.0",
         "signal": "13.0.0",
         "simple-emitter": "3.0.1",
         "simple-i18n": "2.0.1",
@@ -576,7 +577,7 @@
         "sparse-matrices": "2.0.1",
         "sparse-polynomials": "3.0.1",
         "spec": "8.1.1",
-        "spec-discovery": "8.4.0",
+        "spec-discovery": "8.4.1",
         "spec-mocha": "5.1.1",
         "spec-node": "0.0.3",
         "spec-quickcheck": "5.0.2",
@@ -722,27 +723,13 @@
       }
     },
     "extra_packages": {
-      "ref-lifted": {
-        "path": "../purescript-ref-lifted"
-      },
-      "yoga-fastify": {
-        "path": "../purescript-yoga-fastify"
-      },
-      "yoga-http-api": {
-        "path": "../purescript-yoga-http-api"
-      },
-      "yoga-om": {
-        "path": "../purescript-yoga-om"
-      },
-      "yoga-om-layer": {
-        "path": "../purescript-yoga-om-layer"
-      },
-      "yoga-om-strom": {
-        "path": "../purescript-yoga-om-strom"
-      },
-      "yoga-om-workerbees": {
-        "path": "../purescript-yoga-om-workerbees"
-      },
+      "ref-lifted": "0.0.1",
+      "yoga-fastify": "0.3.0",
+      "yoga-http-api": "0.2.0",
+      "yoga-om": "1.5.1",
+      "yoga-om-layer": "1.2.1",
+      "yoga-om-strom": "0.4.1",
+      "yoga-om-workerbees": "0.1.1",
       "yoga-options": "0.1.0"
     }
   },
@@ -1626,8 +1613,9 @@
       ]
     },
     "ref-lifted": {
-      "type": "local",
-      "path": "../purescript-ref-lifted",
+      "type": "registry",
+      "version": "0.0.1",
+      "integrity": "sha256-7Y3ILKTCvlEK4zu0mafduZIX8JwdSPHhbYFKuEpn7YU=",
       "dependencies": [
         "effect",
         "prelude",
@@ -1996,8 +1984,9 @@
       ]
     },
     "yoga-fastify": {
-      "type": "local",
-      "path": "../purescript-yoga-fastify",
+      "type": "registry",
+      "version": "0.3.0",
+      "integrity": "sha256-nQZq9ZSVFPSXFzLtC32iz4RRT0JgigFLKlAe1PGB+Lo=",
       "dependencies": [
         "aff",
         "arrays",
@@ -2022,8 +2011,9 @@
       ]
     },
     "yoga-http-api": {
-      "type": "local",
-      "path": "../purescript-yoga-http-api",
+      "type": "registry",
+      "version": "0.2.0",
+      "integrity": "sha256-zcQusL24+05UYAb2DuSBgL6nHeivVUOKOAWl5ZZWK/w=",
       "dependencies": [
         "aff",
         "arrays",
@@ -2085,8 +2075,9 @@
       ]
     },
     "yoga-om": {
-      "type": "local",
-      "path": "../purescript-yoga-om",
+      "type": "registry",
+      "version": "1.5.1",
+      "integrity": "sha256-Fx9Or+0JO7uOYcjbKX0LeY+9fuIxYilZTMd4Q1eje0k=",
       "dependencies": [
         "aff",
         "aff-retry",
@@ -2098,13 +2089,13 @@
         "either",
         "exceptions",
         "functions",
+        "heterogeneous",
         "maybe",
         "newtype",
         "parallel",
         "prelude",
         "record",
         "record-studio",
-        "ref-lifted",
         "refs",
         "tailrec",
         "transformers",
@@ -2116,8 +2107,9 @@
       ]
     },
     "yoga-om-layer": {
-      "type": "local",
-      "path": "../purescript-yoga-om-layer",
+      "type": "registry",
+      "version": "1.2.1",
+      "integrity": "sha256-7IdanBqLbr+2chIVvnxWG/QidA4cVMVIydGv+lIXU+I=",
       "dependencies": [
         "aff",
         "aff-retry",
@@ -2132,7 +2124,6 @@
         "prelude",
         "record",
         "record-studio",
-        "ref-lifted",
         "refs",
         "transformers",
         "type-equality",
@@ -2143,8 +2134,9 @@
       ]
     },
     "yoga-om-strom": {
-      "type": "local",
-      "path": "../purescript-yoga-om-strom",
+      "type": "registry",
+      "version": "0.4.1",
+      "integrity": "sha256-IIfjEQY7g6/4BjPkCj2yvhXPL8mmAfiJykZy3A+iGnI=",
       "dependencies": [
         "aff",
         "arrays",
@@ -2162,7 +2154,6 @@
         "maybe",
         "now",
         "prelude",
-        "ref-lifted",
         "refs",
         "spec",
         "st",
@@ -2174,8 +2165,9 @@
       ]
     },
     "yoga-om-workerbees": {
-      "type": "local",
-      "path": "../purescript-yoga-om-workerbees",
+      "type": "registry",
+      "version": "0.1.1",
+      "integrity": "sha256-co+fF1KZ6f0n9oBoMo90fkHaRF420Q8OFJe0BKaDMkk=",
       "dependencies": [
         "aff",
         "arraybuffer-types",
