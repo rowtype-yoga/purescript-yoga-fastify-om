@@ -722,10 +722,55 @@
     "extra_packages": {
       "ref-lifted": "0.0.1",
       "yoga-fastify": {
-        "path": "../purescript-yoga-fastify"
+        "git": "https://github.com/rowtype-yoga/purescript-yoga-fastify.git",
+        "ref": "v0.5.0",
+        "dependencies": [
+          "aff",
+          "arrays",
+          "bifunctors",
+          "effect",
+          "either",
+          "foldable-traversable",
+          "foreign",
+          "foreign-object",
+          "js-promise",
+          "js-promise-aff",
+          "maybe",
+          "newtype",
+          "nullable",
+          "prelude",
+          "record",
+          "strings",
+          "unsafe-coerce",
+          "variant",
+          "yoga-http-api",
+          "yoga-json"
+        ]
       },
       "yoga-http-api": {
-        "path": "../purescript-yoga-http-api"
+        "git": "https://github.com/rowtype-yoga/purescript-yoga-http-api.git",
+        "ref": "v0.3.0",
+        "dependencies": [
+          "aff",
+          "arrays",
+          "either",
+          "foldable-traversable",
+          "foreign",
+          "foreign-object",
+          "identity",
+          "integers",
+          "maybe",
+          "newtype",
+          "prelude",
+          "record",
+          "strings",
+          "tuples",
+          "undefined-is-not-a-problem",
+          "unsafe-coerce",
+          "variant",
+          "yoga-json",
+          "yoga-options"
+        ]
       },
       "yoga-om": "1.5.1",
       "yoga-om-layer": "1.2.1",
@@ -1975,8 +2020,9 @@
       ]
     },
     "yoga-fastify": {
-      "type": "local",
-      "path": "../purescript-yoga-fastify",
+      "type": "git",
+      "url": "https://github.com/rowtype-yoga/purescript-yoga-fastify.git",
+      "rev": "25d1d9443efbbc4ff4b67e7fbc272686d26bd6a0",
       "dependencies": [
         "aff",
         "arrays",
@@ -2001,8 +2047,9 @@
       ]
     },
     "yoga-http-api": {
-      "type": "local",
-      "path": "../purescript-yoga-http-api",
+      "type": "git",
+      "url": "https://github.com/rowtype-yoga/purescript-yoga-http-api.git",
+      "rev": "abbe5221f6abfb817552bb0524577d173a1f080b",
       "dependencies": [
         "aff",
         "arrays",

@@ -2,8 +2,53 @@ workspace:
   packageSet:
     registry: 73.2.0
   extraPackages:
-    yoga-fastify: "0.5.0"
-    yoga-http-api: "0.3.0"
+    yoga-fastify:
+      git: https://github.com/rowtype-yoga/purescript-yoga-fastify.git
+      ref: v0.5.0
+      dependencies:
+        - aff
+        - arrays
+        - bifunctors
+        - effect
+        - either
+        - foldable-traversable
+        - foreign
+        - foreign-object
+        - js-promise
+        - js-promise-aff
+        - maybe
+        - newtype
+        - nullable
+        - prelude
+        - record
+        - strings
+        - unsafe-coerce
+        - variant
+        - yoga-http-api
+        - yoga-json
+    yoga-http-api:
+      git: https://github.com/rowtype-yoga/purescript-yoga-http-api.git
+      ref: v0.3.0
+      dependencies:
+        - aff
+        - arrays
+        - either
+        - foldable-traversable
+        - foreign
+        - foreign-object
+        - identity
+        - integers
+        - maybe
+        - newtype
+        - prelude
+        - record
+        - strings
+        - tuples
+        - undefined-is-not-a-problem
+        - unsafe-coerce
+        - variant
+        - yoga-json
+        - yoga-options
     yoga-om-layer: "1.2.1"
     yoga-om-strom: "0.4.1"
     yoga-om: "1.5.1"
