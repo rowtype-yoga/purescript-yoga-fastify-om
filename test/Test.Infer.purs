@@ -10,7 +10,6 @@ import Effect.Aff (Aff)
 import Effect.Aff as Aff
 import Effect.Class (liftEffect)
 import Effect.Class.Console as Console
-import Yoga.Om.Ref as Ref
 import Foreign (unsafeToForeign)
 import Foreign.Object as FObject
 import Type.Function (type (#))
@@ -18,7 +17,9 @@ import Unsafe.Coerce (unsafeCoerce)
 import Yoga.Fastify.Fastify (Fastify, Host(..), Port(..), RouteURL(..))
 import Yoga.Fastify.Fastify as F
 import Yoga.Fastify.Om.API (registerAPILayer)
-import Yoga.Fastify.Om.Route (class HeaderValueType, class RenderJSONSchema, GET, Handler, PUT, Route, buildOpenAPISpec, handle, mapReject, onError, respond)
+import Data.Unit (unit)
+import Yoga.Fastify.Om.Route (class HeaderValueType, class RenderJSONSchema, GET, Handler, PUT, Route, buildOpenAPISpec, handle, mapReject, onError, respond, respondWith)
+import Yoga.Fastify.Om.Route.OmHandler (reject, respondNoContent)
 import Yoga.HTTP.API.Path (type (/), type (:))
 import Yoga.HTTP.API.Route (class ParseParam)
 import Yoga.HTTP.API.Route.OpenAPI (class CollectSchemaNames, class CollectSchemas)
@@ -27,6 +28,7 @@ import Yoga.JSON (class ReadForeign, class WriteForeign, writeJSON)
 import Yoga.Om (Om, toOm)
 import Yoga.Om as Om
 import Yoga.Om.Layer (OmLayer, runLayer)
+import Yoga.Om.Ref as Ref
 
 type User = { name :: UserName, email :: UserEmail }
 newtype UserName = UserName (String # MinLength 3)
@@ -65,15 +67,26 @@ type GetUser = Route GET
   , notFound :: { body :: { error :: String } }
   )
 
-type GetHealth = Route GET "health" {} (ok :: { body :: { status :: String } })
+type GetHealth = Route GET "health" {}
+  ( ok :: { body :: { status :: String } }
+  , notFound :: { body :: {} }
+  )
 
 type OpenAPIRoute = Route GET "openapi" {} (ok :: { body :: String })
+
+type DeleteResource = Route PUT "resource" {}
+  ( noContent :: {} )
+
+type HeadResource = Route GET "check" {}
+  ( noContent :: { headers :: { "X-Exists" :: String } } )
 
 type API =
   { getUser :: GetUser
   , putUser :: PutUser
   , health :: GetHealth
   , openapi :: OpenAPIRoute
+  , deleteResource :: DeleteResource
+  , headResource :: HeadResource
   }
 
 getUserHandler :: Handler GetUser (userRepo :: UserRepo)
@@ -95,7 +108,9 @@ putUserHandler = handle do
 
 healthHandler :: Handler GetHealth ()
 healthHandler = handle do
-  respond @200 { status: "healthy" }
+  when (3 > 4) do
+    reject @"notFound" {}
+  respond @"ok" { status: "healthy" }
 
 openapiHandler :: Handler OpenAPIRoute ()
 openapiHandler = handle do
@@ -104,12 +119,22 @@ openapiHandler = handle do
     , version: "1.0.0"
     }
 
+deleteResourceHandler :: Handler DeleteResource ()
+deleteResourceHandler = handle do
+  respondNoContent
+
+headResourceHandler :: Handler HeadResource ()
+headResourceHandler = handle do
+  respondWith @"noContent" { "X-Exists": "true" } unit
+
 apiLayer :: OmLayer (fastify :: Fastify, userRepo :: UserRepo) () {}
 apiLayer = registerAPILayer @API
   { getUser: getUserHandler
   , putUser: putUserHandler
   , health: healthHandler
   , openapi: openapiHandler
+  , deleteResource: deleteResourceHandler
+  , headResource: headResourceHandler
   }
 
 type UserRepoCtx r = (userRepo :: UserRepo | r)
