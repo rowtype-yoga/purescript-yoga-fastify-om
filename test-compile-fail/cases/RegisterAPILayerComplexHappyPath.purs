@@ -1,5 +1,8 @@
 module Test.CompileFail.RegisterAPILayerComplexHappyPath where
 
+-- This is the happy-path fixture: it should compile because every handler's
+-- dependency row is satisfied by the layer context, even when handlers require
+-- different overlapping subsets of the available dependencies.
 import Prelude
 
 import Yoga.Fastify.Fastify (Fastify)
