@@ -12,6 +12,11 @@ module Yoga.Fastify.Om.API
   , resolveHandlersRL
   , class ResolveHandlerCtx
   , class ResolveHandlerCtxRL
+  , class CheckHandlerDependency
+  , class ValidateAPIHandlers
+  , class CheckAPIHandler
+  , class NoExtraHandlers
+  , class CheckAPIFieldExists
   , class APIHandlers
   ) where
 
@@ -24,6 +29,7 @@ import Effect.Class (liftEffect)
 import Prim.Row as Row
 import Prim.RowList as RL
 import Prim.RowList (class RowToList)
+import Prim.TypeError (class Fail, Above, Beside, Quote, Text)
 import Record as Record
 import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Fastify (Fastify)
@@ -128,29 +134,84 @@ class ResolveHandlersRL (rl :: RL.RowList Type) (ctx :: Row Type) (handlers :: R
 instance ResolveHandlersRL RL.Nil ctx handlers () where
   resolveHandlersRL _ _ _ = identity
 
-class ResolveHandlerCtx (handlerCtx :: Row Type) (ctx :: Row Type)
+class ResolveHandlerCtx (apiLabel :: Symbol) (handlerCtx :: Row Type) (ctx :: Row Type)
 
 instance
   ( RL.RowToList handlerCtx handlerCtxRL
-  , ResolveHandlerCtxRL handlerCtxRL ctx
+  , RL.RowToList ctx ctxRL
+  , ResolveHandlerCtxRL apiLabel handlerCtx handlerCtxRL ctx ctxRL
   ) =>
-  ResolveHandlerCtx handlerCtx ctx
+  ResolveHandlerCtx apiLabel handlerCtx ctx
 
-class ResolveHandlerCtxRL (rl :: RL.RowList Type) (ctx :: Row Type)
+class ResolveHandlerCtxRL (apiLabel :: Symbol) (handlerCtx :: Row Type) (required :: RL.RowList Type) (ctx :: Row Type) (available :: RL.RowList Type)
 
-instance ResolveHandlerCtxRL RL.Nil ctx
+instance ResolveHandlerCtxRL apiLabel handlerCtx RL.Nil ctx available
 
 instance
-  ( IsSymbol label
-  , Row.Cons label ty rest ctx
-  , ResolveHandlerCtxRL tail ctx
+  ( CheckHandlerDependency apiLabel label ty available handlerCtx ctx
+  , ResolveHandlerCtxRL apiLabel handlerCtx tail ctx available
   ) =>
-  ResolveHandlerCtxRL (RL.Cons label ty tail) ctx
+  ResolveHandlerCtxRL apiLabel handlerCtx (RL.Cons label ty tail) ctx available
+
+class CheckHandlerDependency (apiLabel :: Symbol) (label :: Symbol) (ty :: Type) (available :: RL.RowList Type) (handlerCtx :: Row Type) (ctx :: Row Type)
+
+instance
+  CheckHandlerDependency apiLabel label ty (RL.Cons label ty tail) handlerCtx ctx
+else instance
+  ( IsSymbol apiLabel
+  , IsSymbol label
+  , Fail
+      ( Above
+          (Text "registerAPILayer dependency type mismatch.")
+          ( Above
+              (Beside (Text "Handler: ") (Quote apiLabel))
+              ( Above
+                  (Beside (Text "Dependency: ") (Quote label))
+                  ( Above
+                      (Beside (Text "Expected: ") (Quote ty))
+                      ( Above
+                          (Beside (Text "Actual: ") (Quote actualTy))
+                          ( Above
+                              (Beside (Text "Handler context: ") (Quote handlerCtx))
+                              (Beside (Text "Layer context: ") (Quote ctx))
+                          )
+                      )
+                  )
+              )
+          )
+      )
+  ) =>
+  CheckHandlerDependency apiLabel label ty (RL.Cons label actualTy tail) handlerCtx ctx
+else instance
+  CheckHandlerDependency apiLabel label ty tail handlerCtx ctx =>
+  CheckHandlerDependency apiLabel label ty (RL.Cons otherLabel otherTy tail) handlerCtx ctx
+else instance
+  ( IsSymbol apiLabel
+  , IsSymbol label
+  , Fail
+      ( Above
+          (Text "registerAPILayer is missing a required dependency.")
+          ( Above
+              (Beside (Text "Handler: ") (Quote apiLabel))
+              ( Above
+                  (Beside (Text "Missing dependency: ") (Quote label))
+                  ( Above
+                      (Beside (Text "Expected type: ") (Quote ty))
+                      ( Above
+                          (Beside (Text "Handler context: ") (Quote handlerCtx))
+                          (Beside (Text "Layer context: ") (Quote ctx))
+                      )
+                  )
+              )
+          )
+      )
+  ) =>
+  CheckHandlerDependency apiLabel label ty RL.Nil handlerCtx ctx
 
 instance
   ( IsSymbol label
   , Row.Cons label (Handler route handlerCtx) rest handlers
-  , ResolveHandlerCtx handlerCtx ctx
+  , ResolveHandlerCtx label handlerCtx ctx
   , ResolveHandlersRL tail ctx handlers tailResolved
   , Row.Cons label (Internal.Handler route) tailResolved resolved
   , Row.Lacks label tailResolved
@@ -162,6 +223,80 @@ instance
     where
     Handler mkHandler = Record.get (Proxy :: Proxy label) handlers
     handler = mkHandler (unsafeCoerce ctx)
+
+class ValidateAPIHandlers (apiRL :: RL.RowList Type) (handlerRL :: RL.RowList Type) (handlers :: Row Type)
+
+instance ValidateAPIHandlers RL.Nil handlerRL handlers
+
+instance
+  ( CheckAPIHandler label route handlerRL
+  , ValidateAPIHandlers tail handlerRL handlers
+  ) =>
+  ValidateAPIHandlers (RL.Cons label route tail) handlerRL handlers
+
+class CheckAPIHandler (label :: Symbol) (route :: Type) (handlerRL :: RL.RowList Type)
+
+instance
+  CheckAPIHandler label route (RL.Cons label (Handler route handlerCtx) tail)
+else instance
+  ( IsSymbol label
+  , Fail
+      ( Above
+          (Text "registerAPILayer handler route mismatch.")
+          ( Above
+              (Beside (Text "Handler field: ") (Quote label))
+              ( Above
+                  (Beside (Text "Expected route: ") (Quote route))
+                  (Beside (Text "Actual handler type: ") (Quote handler))
+              )
+          )
+      )
+  ) =>
+  CheckAPIHandler label route (RL.Cons label handler tail)
+else instance
+  CheckAPIHandler label route tail =>
+  CheckAPIHandler label route (RL.Cons otherLabel handler tail)
+else instance
+  ( IsSymbol label
+  , Fail
+      ( Above
+          (Text "registerAPILayer is missing a handler.")
+          ( Above
+              (Beside (Text "Missing field: ") (Quote label))
+              (Beside (Text "Expected route: ") (Quote route))
+          )
+      )
+  ) =>
+  CheckAPIHandler label route RL.Nil
+
+class NoExtraHandlers (handlerRL :: RL.RowList Type) (apiRL :: RL.RowList Type) (apiRow :: Row Type)
+
+instance NoExtraHandlers RL.Nil apiRL apiRow
+
+instance
+  ( CheckAPIFieldExists label apiRL apiRow
+  , NoExtraHandlers tail apiRL apiRow
+  ) =>
+  NoExtraHandlers (RL.Cons label handler tail) apiRL apiRow
+
+class CheckAPIFieldExists (label :: Symbol) (apiRL :: RL.RowList Type) (apiRow :: Row Type)
+
+instance CheckAPIFieldExists label (RL.Cons label route tail) apiRow
+else instance
+  CheckAPIFieldExists label tail apiRow =>
+  CheckAPIFieldExists label (RL.Cons otherLabel route tail) apiRow
+else instance
+  ( IsSymbol label
+  , Fail
+      ( Above
+          (Text "registerAPILayer received an extra handler.")
+          ( Above
+              (Beside (Text "Extra field: ") (Quote label))
+              (Beside (Text "API shape: ") (Quote apiRow))
+          )
+      )
+  ) =>
+  CheckAPIFieldExists label RL.Nil apiRow
 
 class APIHandlers (rl :: RL.RowList Type) (handlers :: Row Type) | rl -> handlers
 
@@ -175,10 +310,12 @@ instance
   APIHandlers (RL.Cons label route tail) handlers
 
 registerAPILayer
-  :: forall @api apiRow apiRL handlers resolved ctx
+  :: forall @api apiRow apiRL handlers handlerRL resolved ctx
    . ApiRecord api apiRow
   => RL.RowToList apiRow apiRL
-  => APIHandlers apiRL handlers
+  => RL.RowToList handlers handlerRL
+  => ValidateAPIHandlers apiRL handlerRL handlers
+  => NoExtraHandlers handlerRL apiRL apiRow
   => ResolveHandlers (fastify :: Fastify | ctx) handlers resolved
   => RegisterAPI resolved
   => Record handlers
