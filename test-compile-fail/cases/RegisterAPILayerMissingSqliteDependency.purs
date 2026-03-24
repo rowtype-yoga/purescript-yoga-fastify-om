@@ -1,4 +1,4 @@
--- EXPECT: sqlite
+-- EXPECT: Prim.Row.Cons "sqlite"
 module Test.CompileFail.RegisterAPILayerMissingSqliteDependency where
 
 import Prelude

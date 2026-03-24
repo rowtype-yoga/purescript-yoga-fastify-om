@@ -1,4 +1,4 @@
--- EXPECT: ghost
+-- EXPECT: Prim.Row.Cons "health"
 module Test.CompileFail.RegisterAPILayerMixedMissingAndExtraHandlers where
 
 import Prelude
