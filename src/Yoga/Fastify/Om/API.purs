@@ -31,6 +31,7 @@ import Prim.RowList as RL
 import Prim.RowList (class RowToList)
 import Prim.TypeError (class Fail, Above, Beside, Quote, Text)
 import Record as Record
+import Type.Function (type ($))
 import Type.Proxy (Proxy(..))
 import Yoga.Fastify.Fastify (Fastify)
 import Yoga.Fastify.Route.HandleResponse (class HandleResponse)
@@ -160,25 +161,20 @@ instance
 else instance
   ( IsSymbol apiLabel
   , IsSymbol label
-  , Fail
-      ( Above
-          (Text "registerAPILayer dependency type mismatch.")
-          ( Above
-              (Beside (Text "Handler: ") (Quote apiLabel))
-              ( Above
-                  (Beside (Text "Dependency: ") (Quote label))
-                  ( Above
-                      (Beside (Text "Expected: ") (Quote ty))
-                      ( Above
-                          (Beside (Text "Actual: ") (Quote actualTy))
-                          ( Above
-                              (Beside (Text "Handler context: ") (Quote handlerCtx))
-                              (Beside (Text "Layer context: ") (Quote ctx))
-                          )
-                      )
-                  )
-              )
-          )
+  , Fail (
+      Above
+        (Text "registerAPILayer dependency type mismatch.") $
+        Above
+          (Beside (Text "Handler: ") (Quote apiLabel)) $
+          Above
+            (Beside (Text "Dependency: ") (Quote label)) $
+            Above
+              (Beside (Text "Expected: ") (Quote ty)) $
+              Above
+                (Beside (Text "Actual: ") (Quote actualTy)) $
+                Above
+                  (Beside (Text "Handler context: ") (Quote handlerCtx))
+                  (Beside (Text "Layer context: ") (Quote ctx))
       )
   ) =>
   CheckHandlerDependency apiLabel label ty (RL.Cons label actualTy tail) handlerCtx ctx
@@ -188,22 +184,18 @@ else instance
 else instance
   ( IsSymbol apiLabel
   , IsSymbol label
-  , Fail
-      ( Above
-          (Text "registerAPILayer is missing a required dependency.")
-          ( Above
-              (Beside (Text "Handler: ") (Quote apiLabel))
-              ( Above
-                  (Beside (Text "Missing dependency: ") (Quote label))
-                  ( Above
-                      (Beside (Text "Expected type: ") (Quote ty))
-                      ( Above
-                          (Beside (Text "Handler context: ") (Quote handlerCtx))
-                          (Beside (Text "Layer context: ") (Quote ctx))
-                      )
-                  )
-              )
-          )
+  , Fail (
+      Above
+        (Text "registerAPILayer is missing a required dependency.") $
+        Above
+          (Beside (Text "Handler: ") (Quote apiLabel)) $
+          Above
+            (Beside (Text "Missing dependency: ") (Quote label)) $
+            Above
+              (Beside (Text "Expected type: ") (Quote ty)) $
+              Above
+                (Beside (Text "Handler context: ") (Quote handlerCtx))
+                (Beside (Text "Layer context: ") (Quote ctx))
       )
   ) =>
   CheckHandlerDependency apiLabel label ty RL.Nil handlerCtx ctx
@@ -240,16 +232,14 @@ instance
   CheckAPIHandler label route (RL.Cons label (Handler route handlerCtx) tail)
 else instance
   ( IsSymbol label
-  , Fail
-      ( Above
-          (Text "registerAPILayer handler route mismatch.")
-          ( Above
-              (Beside (Text "Handler field: ") (Quote label))
-              ( Above
-                  (Beside (Text "Expected route: ") (Quote route))
-                  (Beside (Text "Actual handler type: ") (Quote handler))
-              )
-          )
+  , Fail (
+      Above
+        (Text "registerAPILayer handler route mismatch.") $
+        Above
+          (Beside (Text "Handler field: ") (Quote label)) $
+          Above
+            (Beside (Text "Expected route: ") (Quote route))
+            (Beside (Text "Actual handler type: ") (Quote handler))
       )
   ) =>
   CheckAPIHandler label route (RL.Cons label handler tail)
@@ -258,13 +248,12 @@ else instance
   CheckAPIHandler label route (RL.Cons otherLabel handler tail)
 else instance
   ( IsSymbol label
-  , Fail
-      ( Above
-          (Text "registerAPILayer is missing a handler.")
-          ( Above
-              (Beside (Text "Missing field: ") (Quote label))
-              (Beside (Text "Expected route: ") (Quote route))
-          )
+  , Fail (
+      Above
+        (Text "registerAPILayer is missing a handler.") $
+        Above
+          (Beside (Text "Missing field: ") (Quote label))
+          (Beside (Text "Expected route: ") (Quote route))
       )
   ) =>
   CheckAPIHandler label route RL.Nil
@@ -287,13 +276,12 @@ else instance
   CheckAPIFieldExists label (RL.Cons otherLabel route tail) apiRow
 else instance
   ( IsSymbol label
-  , Fail
-      ( Above
-          (Text "registerAPILayer received an extra handler.")
-          ( Above
-              (Beside (Text "Extra field: ") (Quote label))
-              (Beside (Text "API shape: ") (Quote apiRow))
-          )
+  , Fail (
+      Above
+        (Text "registerAPILayer received an extra handler.") $
+        Above
+          (Beside (Text "Extra field: ") (Quote label))
+          (Beside (Text "API shape: ") (Quote apiRow))
       )
   ) =>
   CheckAPIFieldExists label RL.Nil apiRow
