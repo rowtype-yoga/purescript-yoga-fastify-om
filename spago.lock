@@ -81,9 +81,7 @@
             {
               "arrays": ">=7.0.0 <8.0.0"
             },
-            {
-              "compile-fail": ">=0.1.0 <1.0.0"
-            },
+            "compile-fail",
             {
               "console": ">=6.0.0 <7.0.0"
             },
@@ -130,7 +128,12 @@
         }
       }
     },
-    "extra_packages": {}
+    "extra_packages": {
+      "compile-fail": {
+        "git": "https://github.com/rowtype-yoga/purescript-compile-fail.git",
+        "ref": "feat/golden-helper-extract"
+      }
+    }
   },
   "packages": {
     "aff": {
@@ -270,9 +273,9 @@
       ]
     },
     "compile-fail": {
-      "type": "registry",
-      "version": "0.3.1",
-      "integrity": "sha256-nd5BrFIr3ppJb1LwCZPQPyLaImm4OGmycqUwg123XqU=",
+      "type": "git",
+      "url": "https://github.com/rowtype-yoga/purescript-compile-fail.git",
+      "rev": "94ed81f3d5c1b63e49827cc99857dc798edd2734",
       "dependencies": [
         "aff",
         "arrays",
