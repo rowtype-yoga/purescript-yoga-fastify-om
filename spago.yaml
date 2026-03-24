@@ -36,6 +36,7 @@ package:
     dependencies:
       - spec: ">=7.0.0 <9.0.0"
       - vitest: ">=1.0.0 <2.0.0"
+      - compile-fail: ">=0.1.0 <1.0.0"
       - console: ">=6.0.0 <7.0.0"
       - exceptions: ">=6.0.0 <7.0.0"
       - foreign: ">=7.0.0 <8.0.0"

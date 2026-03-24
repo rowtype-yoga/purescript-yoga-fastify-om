@@ -110,30 +110,31 @@ else instance
     registerHandler (Record.get (Proxy :: Proxy label) handlers) fastify
     registerAPIRL (Proxy :: Proxy tail) handlers fastify
 
-class ResolveHandlers (handlers :: Row Type) (resolved :: Row Type) | handlers -> resolved where
-  resolveHandlers :: forall ctx. Record ctx -> Record handlers -> Record resolved
+class ResolveHandlers (ctx :: Row Type) (handlers :: Row Type) (resolved :: Row Type) | ctx handlers -> resolved where
+  resolveHandlers :: Record ctx -> Record handlers -> Record resolved
 
 instance
   ( RL.RowToList handlers rl
-  , ResolveHandlersRL rl handlers resolved
+  , ResolveHandlersRL rl ctx handlers resolved
   ) =>
-  ResolveHandlers handlers resolved where
+  ResolveHandlers ctx handlers resolved where
   resolveHandlers ctx handlers = Builder.buildFromScratch (resolveHandlersRL (Proxy :: Proxy rl) ctx handlers)
 
-class ResolveHandlersRL (rl :: RL.RowList Type) (handlers :: Row Type) (resolved :: Row Type) | rl -> resolved where
-  resolveHandlersRL :: forall ctx. Proxy rl -> Record ctx -> Record handlers -> Builder (Record ()) (Record resolved)
+class ResolveHandlersRL (rl :: RL.RowList Type) (ctx :: Row Type) (handlers :: Row Type) (resolved :: Row Type) | rl handlers -> resolved where
+  resolveHandlersRL :: Proxy rl -> Record ctx -> Record handlers -> Builder (Record ()) (Record resolved)
 
-instance ResolveHandlersRL RL.Nil handlers () where
+instance ResolveHandlersRL RL.Nil ctx handlers () where
   resolveHandlersRL _ _ _ = identity
 
 instance
   ( IsSymbol label
   , Row.Cons label (Handler route handlerCtx) rest handlers
-  , ResolveHandlersRL tail handlers tailResolved
+  , Row.Union handlerCtx ignored ctx
+  , ResolveHandlersRL tail ctx handlers tailResolved
   , Row.Cons label (Internal.Handler route) tailResolved resolved
   , Row.Lacks label tailResolved
   ) =>
-  ResolveHandlersRL (RL.Cons label (Handler route handlerCtx) tail) handlers resolved where
+  ResolveHandlersRL (RL.Cons label (Handler route handlerCtx) tail) ctx handlers resolved where
   resolveHandlersRL _ ctx handlers =
     resolveHandlersRL (Proxy :: Proxy tail) ctx handlers
       >>> Builder.insert (Proxy :: Proxy label) handler
@@ -157,7 +158,7 @@ registerAPILayer
    . ApiRecord api apiRow
   => RL.RowToList apiRow apiRL
   => APIHandlers apiRL handlers
-  => ResolveHandlers handlers resolved
+  => ResolveHandlers (fastify :: Fastify | ctx) handlers resolved
   => RegisterAPI resolved
   => Record handlers
   -> OmLayer (fastify :: Fastify | ctx) () {}

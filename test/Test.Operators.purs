@@ -11,6 +11,7 @@ import Test.Features.Responses as Responses
 import Test.Features.Validation as Validation
 import Test.Features.ErrorHandling as ErrorHandling
 import Test.Internal.Rendering as Rendering
+import Test.CompileFail as CompileFail
 
 spec :: Effect ViTest
 spec = do
@@ -70,7 +71,8 @@ spec = do
   _ <- Headers.testToOpenAPI
   _ <- Responses.testSimpleVariantOpenAPI
   _ <- Responses.testComplexVariantOpenAPI
-  Responses.testVariantWithHeaders
+  _ <- Responses.testVariantWithHeaders
+  CompileFail.testCompileFail
 
 main :: ViTest
 main = viTest spec
