@@ -1,4 +1,3 @@
--- EXPECT: Prim.Row.Cons "sqlite"
 module Test.CompileFail.RegisterAPILayerMissingDependencyAcrossMultipleHandlers where
 
 import Prelude

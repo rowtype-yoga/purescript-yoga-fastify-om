@@ -1,4 +1,3 @@
--- EXPECT: Prim.Row.Cons "health"
 module Test.CompileFail.RegisterAPILayerExtraHandler where
 
 import Prelude

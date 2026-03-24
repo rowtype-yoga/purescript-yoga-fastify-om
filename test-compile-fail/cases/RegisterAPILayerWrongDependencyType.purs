@@ -1,4 +1,3 @@
--- EXPECT: while matching label sqlite
 module Test.CompileFail.RegisterAPILayerWrongDependencyType where
 
 import Prelude
