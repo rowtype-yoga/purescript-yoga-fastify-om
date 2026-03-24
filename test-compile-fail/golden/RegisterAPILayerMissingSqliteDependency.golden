@@ -1,10 +1,4 @@
-Error found:
-in module Test.CompileFail.RegisterAPILayerMissingSqliteDependency
-at test-compile-fail/cases/RegisterAPILayerMissingSqliteDependency.purs:23:12 - 25:4 (line 23, column 12 - line 25, column 4)
-
-  Custom error:
-
-    registerAPILayer is missing a required dependency.
+registerAPILayer is missing a required dependency.
     Handler: "health"
     Missing dependency: "sqlite"
     Expected type: Connection
@@ -12,58 +6,3 @@ at test-compile-fail/cases/RegisterAPILayerMissingSqliteDependency.purs:23:12 - 
                      )
     Layer context: ( fastify :: Fastify
                    )
-
-
-while solving type class constraint
-
-  Yoga.Fastify.Om.API.CheckHandlerDependency "health"
-                                             "sqlite"
-                                             Connection
-                                             (Nil @Type)
-                                             ( sqlite :: Connection
-                                             )
-                                             ( fastify :: Fastify
-                                             )
-
-while applying a function registerAPILayer
-  of type ApiRecord
-            { health :: Route @Symbol GET "health" (Record ...)
-                          ( ok :: ...
-                          )
-            }
-            t0
-           => RowToList @Type t0 t1 => RowToList @Type t2 t3 => ValidateAPIHandlers t1 t3 t2 => NoExtraHandlers t3 t1 t0 => ResolveHandlers
-                                                                                                                              ( fastify :: Fastify
-                                                                                                                              | t4
-                                                                                                                              )
-                                                                                                                              t2
-                                                                                                                              t5
-                                                                                                                             => RegisterAPI t5 => Record t2
-                                                                                                                                                  -> OmLayer
-                                                                                                                                                       ( fastify :: Fastify
-                                                                                                                                                       | t4
-                                                                                                                                                       )
-                                                                                                                                                       (() @Type)
-                                                                                                                                                       (Record (() @Type))
-  to argument { health: healthHandler
-              }
-while checking that expression (registerAPILayer) { health: healthHandler
-                                                  }
-  has type OmLayer
-             ( fastify :: Fastify
-             )
-             (() @Type)
-             (Record (() @Type))
-in value declaration apiLayer
-
-where t0 is an unknown type
-      t1 is an unknown type
-      t2 is an unknown type
-      t3 is an unknown type
-      t5 is an unknown type
-      t4 is an unknown type
-
-See https://github.com/purescript/documentation/blob/master/errors/NoInstanceFound.md for more information,
-or to contribute content related to this error.
-
-[1 of 1] Compiling Test.CompileFail.RegisterAPILayerMissingSqliteDependency

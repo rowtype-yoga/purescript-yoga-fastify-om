@@ -3,8 +3,10 @@ module Test.CompileFail where
 import Prelude
 
 import CompileFail (compileFile, spagoSources, warmCache)
+import CompileFail.CustomError (extractCustomError)
 import CompileFail.Golden (GoldenResult(..), checkGolden)
 import CompileFail.HtmlDiff (writeDiffReport)
+import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Ref as Ref
@@ -26,13 +28,16 @@ compileFailCase ctxRef filePath =
     result <- compileFile ctx filePath
     expectToBe true result.compilationFailed
     let testName = Path.basenameWithoutExt filePath ".purs"
-    goldenResult <- checkGolden { goldenDir, testName, actual: result.output }
+    let actual = case extractCustomError result.output of
+          Just customError -> customError
+          Nothing -> result.output
+    goldenResult <- checkGolden { goldenDir, testName, actual }
     case goldenResult of
       GoldenMatch -> pure unit
       GoldenNew { goldenPath } ->
         fail $ "No golden file at " <> goldenPath <> ", run with UPDATE_GOLDEN=1 to create it"
-      GoldenMismatch { expected, actual, goldenPath } -> do
-        diffPath <- writeDiffReport { outputDir: diffDir, testName, expected, actual }
+      GoldenMismatch { expected, actual: actualOutput, goldenPath } -> do
+        diffPath <- writeDiffReport { outputDir: diffDir, testName, expected, actual: actualOutput }
         fail $ "Golden mismatch for " <> goldenPath <> "\nDiff report: " <> diffPath
 
 testCompileFail :: Effect ViTest
