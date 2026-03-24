@@ -7,6 +7,7 @@ import Test.Features.Parsing as Parsing
 import Test.Features.RequestParsing as RequestParsing
 import Test.Features.Headers as Headers
 import Test.Features.RequestBody as RequestBody
+import Test.Features.RegisterAPILayer as RegisterAPILayer
 import Test.Features.Responses as Responses
 import Test.Features.Validation as Validation
 import Test.Features.ErrorHandling as ErrorHandling
@@ -38,6 +39,9 @@ spec = do
   -- 4. Request Bodies
   _ <- RequestParsing.testParseBody
   _ <- RequestBody.testRequestBodyToStrom
+
+  -- 4.5 registerAPILayer
+  _ <- RegisterAPILayer.testRegisterAPILayer
 
   -- 5. Responses (Status Codes & Variants)
   _ <- Responses.testStatusCodeMapping

@@ -1,14 +1,18 @@
-module Test.CompileFail.RegisterAPILayerComplexHappyPath where
+module Test.Features.RegisterAPILayer where
 
--- This is the happy-path fixture: it should compile because every handler's
--- dependency row is satisfied by the layer context, even when handlers require
--- different overlapping subsets of the available dependencies.
 import Prelude
 
+import Effect (Effect)
+import Effect.Aff as Aff
+import Effect.Class (liftEffect)
+import ViTest (ViTest, describe, test)
+import ViTest.Expect (expectToBe)
 import Yoga.Fastify.Fastify (Fastify)
+import Yoga.Fastify.Fastify as F
 import Yoga.Fastify.Om.API (registerAPILayer)
 import Yoga.Fastify.Om.Route (GET, Handler, Route, handle, respond)
-import Yoga.Om.Layer (OmLayer)
+import Yoga.Om (runOm)
+import Yoga.Om.Layer (OmLayer, runLayer)
 
 data Connection = Connection
 
@@ -44,3 +48,12 @@ apiLayer = registerAPILayer @API
   , metrics: metricsHandler
   , admin: adminHandler
   }
+
+testRegisterAPILayer :: Effect ViTest
+testRegisterAPILayer = describe "registerAPILayer" do
+  test "accepts handlers whose dependencies are subsets of the layer context" do
+    app <- liftEffect $ F.fastify {}
+    let ctx = { fastify: app, logger: Logger, sqlite: Connection, metrics: Metrics }
+    Aff.finally (F.close app) do
+      _ <- runOm ctx { exception: Aff.throwError } $ runLayer ctx apiLayer
+      expectToBe true true

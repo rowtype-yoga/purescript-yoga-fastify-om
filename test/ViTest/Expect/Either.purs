@@ -3,6 +3,9 @@ module ViTest.Expect.Either where
 import Prelude
 
 import Data.Either (Either(..))
+import Data.Maybe (Maybe(..))
+import Data.String.CodePoints (indexOf)
+import Data.String.Pattern (Pattern(..))
 import Effect.Aff (Aff)
 import ViTest.Expect (expectToBe)
 
@@ -29,15 +32,7 @@ expectIsLeft result = case result of
 expectLeftContains :: forall a. Show a => String -> Either String a -> Aff Unit
 expectLeftContains needle result = case result of
   Left err ->
-    if contains needle err
-    then expectToBe true true
-    else expectToBe true false
+    case indexOf (Pattern needle) err of
+      Just _ -> expectToBe true true
+      Nothing -> expectToBe true false
   Right _ -> expectToBe true false
-  where
-  contains :: String -> String -> Boolean
-  contains n h = indexOf n h >= 0
-
-  indexOf :: String -> String -> Int
-  indexOf = indexOfImpl
-
-foreign import indexOfImpl :: String -> String -> Int

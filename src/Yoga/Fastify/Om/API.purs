@@ -10,6 +10,8 @@ module Yoga.Fastify.Om.API
   , resolveHandlers
   , class ResolveHandlersRL
   , resolveHandlersRL
+  , class ResolveHandlerCtx
+  , class ResolveHandlerCtxRL
   , class APIHandlers
   ) where
 
@@ -126,10 +128,29 @@ class ResolveHandlersRL (rl :: RL.RowList Type) (ctx :: Row Type) (handlers :: R
 instance ResolveHandlersRL RL.Nil ctx handlers () where
   resolveHandlersRL _ _ _ = identity
 
+class ResolveHandlerCtx (handlerCtx :: Row Type) (ctx :: Row Type)
+
+instance
+  ( RL.RowToList handlerCtx handlerCtxRL
+  , ResolveHandlerCtxRL handlerCtxRL ctx
+  ) =>
+  ResolveHandlerCtx handlerCtx ctx
+
+class ResolveHandlerCtxRL (rl :: RL.RowList Type) (ctx :: Row Type)
+
+instance ResolveHandlerCtxRL RL.Nil ctx
+
+instance
+  ( IsSymbol label
+  , Row.Cons label ty rest ctx
+  , ResolveHandlerCtxRL tail ctx
+  ) =>
+  ResolveHandlerCtxRL (RL.Cons label ty tail) ctx
+
 instance
   ( IsSymbol label
   , Row.Cons label (Handler route handlerCtx) rest handlers
-  , Row.Union handlerCtx ignored ctx
+  , ResolveHandlerCtx handlerCtx ctx
   , ResolveHandlersRL tail ctx handlers tailResolved
   , Row.Cons label (Internal.Handler route) tailResolved resolved
   , Row.Lacks label tailResolved
