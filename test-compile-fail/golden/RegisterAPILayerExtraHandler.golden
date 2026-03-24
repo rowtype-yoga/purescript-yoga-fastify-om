@@ -1,0 +1,104 @@
+Error found:
+in module Test.CompileFail.RegisterAPILayerExtraHandler
+at test-compile-fail/cases/RegisterAPILayerExtraHandler.purs:25:12 - 28:4 (line 25, column 12 - line 28, column 4)
+
+  Could not match type
+
+    ( health :: Handler
+                  (Route GET "health" (Record ())
+                     ( ok :: ...
+                     )
+                  )
+                  t5
+    ...
+    )
+
+  with type
+
+    ( extra :: Handler
+                 (Route GET "health" (Record ())
+                    ( ok :: ...
+                    )
+                 )
+                 ()
+    , health :: Handler
+                  (Route GET "health" (Record ())
+                     ( ok :: ...
+                     )
+                  )
+                  ()
+    ...
+    )
+
+
+while solving type class constraint
+
+  Prim.Row.Cons "health"
+                (Handler
+                   (Route @Symbol GET "health" (Record (() @Type))
+                      ( ok :: { body :: String
+                              }
+                      )
+                   )
+                   t5
+                )
+                t6
+                ( extra :: Handler
+                             (Route @Symbol GET "health" (Record ...)
+                                ( ok :: ...
+                                )
+                             )
+                             (() @Type)
+                , health :: Handler
+                              (Route @Symbol GET "health" (Record ...)
+                                 ( ok :: ...
+                                 )
+                              )
+                              (() @Type)
+                )
+
+while applying a function registerAPILayer
+  of type ApiRecord
+            { health :: Route @Symbol GET "health" (Record ...)
+                          ( ok :: ...
+                          )
+            }
+            t0
+           => RowToList @Type t0 t1 => APIHandlers t1 t2 => ResolveHandlers
+                                                              ( fastify :: Fastify
+                                                              | t3
+                                                              )
+                                                              t2
+                                                              t4
+                                                             => RegisterAPI t4 => Record t2
+                                                                                  -> OmLayer
+                                                                                       ( fastify :: Fastify
+                                                                                       | t3
+                                                                                       )
+                                                                                       (() @Type)
+                                                                                       (Record (() @Type))
+  to argument { health: healthHandler
+              , extra: extraHandler
+              }
+while checking that expression (registerAPILayer) { health: healthHandler
+                                                  , extra: extraHandler
+                                                  }
+  has type OmLayer
+             ( fastify :: Fastify
+             )
+             (() @Type)
+             (Record (() @Type))
+in value declaration apiLayer
+
+where t0 is an unknown type
+      t1 is an unknown type
+      t2 is an unknown type
+      t4 is an unknown type
+      t3 is an unknown type
+      t6 is an unknown type
+      t5 is an unknown type
+
+See https://github.com/purescript/documentation/blob/master/errors/TypesDoNotUnify.md for more information,
+or to contribute content related to this error.
+
+[1 of 1] Compiling Test.CompileFail.RegisterAPILayerExtraHandler

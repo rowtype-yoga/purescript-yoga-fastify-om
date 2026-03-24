@@ -1,0 +1,68 @@
+Error found:
+in module Test.CompileFail.RegisterAPILayerMissingSqliteDependency
+at test-compile-fail/cases/RegisterAPILayerMissingSqliteDependency.purs:23:12 - 25:4 (line 23, column 12 - line 25, column 4)
+
+  Could not match type
+
+    ( sqlite :: Connection
+    ...
+    | t5
+    )
+
+  with type
+
+    ( fastify :: Fastify
+    ...
+    )
+
+
+while solving type class constraint
+
+  Prim.Row.Cons "sqlite"
+                Connection
+                t5
+                ( fastify :: Fastify
+                )
+
+while applying a function registerAPILayer
+  of type ApiRecord
+            { health :: Route @Symbol GET "health" (Record ...)
+                          ( ok :: ...
+                          )
+            }
+            t0
+           => RowToList @Type t0 t1 => APIHandlers t1 t2 => ResolveHandlers
+                                                              ( fastify :: Fastify
+                                                              | t3
+                                                              )
+                                                              t2
+                                                              t4
+                                                             => RegisterAPI t4 => Record t2
+                                                                                  -> OmLayer
+                                                                                       ( fastify :: Fastify
+                                                                                       | t3
+                                                                                       )
+                                                                                       (() @Type)
+                                                                                       (Record (() @Type))
+  to argument { health: healthHandler
+              }
+while checking that expression (registerAPILayer) { health: healthHandler
+                                                  }
+  has type OmLayer
+             ( fastify :: Fastify
+             )
+             (() @Type)
+             (Record (() @Type))
+in value declaration apiLayer
+
+where t0 is an unknown type
+      t1 is an unknown type
+      t2 is an unknown type
+      t4 is an unknown type
+      t3 is an unknown type
+      t5 is an unknown type
+
+See https://github.com/purescript/documentation/blob/master/errors/TypesDoNotUnify.md for more information,
+or to contribute content related to this error.
+
+[1 of 1] Compiling Test.CompileFail.RegisterAPILayerMissingSqliteDependency

@@ -1,0 +1,54 @@
+Error found:
+in module Test.CompileFail.RegisterAPILayerWrongDependencyType
+at test-compile-fail/cases/RegisterAPILayerWrongDependencyType.purs:25:12 - 27:4 (line 25, column 12 - line 27, column 4)
+
+  Could not match type
+
+    Connection
+
+  with type
+
+    String
+
+
+while matching label sqlite
+while trying to match type
+                             ( sqlite :: Connection
+                             ...
+                             | t0
+                             )
+
+  with type
+              ( fastify :: Fastify
+              , logger :: Logger
+              , sqlite :: String
+              ...
+              )
+
+while solving type class constraint
+
+  Prim.Row.Cons "sqlite"
+                Connection
+                t0
+                ( fastify :: Fastify
+                , logger :: Logger
+                , sqlite :: String
+                )
+
+while checking that expression (registerAPILayer) { health: healthHandler
+                                                  }
+  has type OmLayer
+             ( fastify :: Fastify
+             , logger :: Logger
+             , sqlite :: String
+             )
+             (() @Type)
+             (Record (() @Type))
+in value declaration apiLayer
+
+where t0 is an unknown type
+
+See https://github.com/purescript/documentation/blob/master/errors/TypesDoNotUnify.md for more information,
+or to contribute content related to this error.
+
+[1 of 1] Compiling Test.CompileFail.RegisterAPILayerWrongDependencyType
