@@ -75,10 +75,10 @@ type GetHealth = Route GET "health" {}
 type OpenAPIRoute = Route GET "openapi" {} (ok :: { body :: String })
 
 type DeleteResource = Route PUT "resource" {}
-  ( noContent :: {} )
+  (noContent :: {})
 
 type HeadResource = Route GET "check" {}
-  ( noContent :: { headers :: { "X-Exists" :: String } } )
+  (noContent :: { headers :: { "X-Exists" :: String } })
 
 type API =
   { getUser :: GetUser
