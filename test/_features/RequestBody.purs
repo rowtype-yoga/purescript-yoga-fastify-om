@@ -28,33 +28,33 @@ expectToEqual expected actual = expectToBe true (expected == actual)
 testRequestBodyToStrom :: Effect ViTest
 testRequestBodyToStrom = describe "RequestBody.toStrom" do
 
-  test "converts BytesBody to Strom" do
+  _ <- test "converts BytesBody to Strom" do
     buf <- liftEffect $ Buffer.fromString "hello" UTF8
     let body = BytesBody buf
     let _stream = toStrom body
     expectToEqual true true -- Smoke test - just verify it compiles and runs
 
-  test "converts TextBody to Strom" do
+  _ <- test "converts TextBody to Strom" do
     let body = TextBody "world"
     let _stream = toStrom body
     expectToEqual true true
 
-  test "converts NoBody to Strom" do
+  _ <- test "converts NoBody to Strom" do
     let body = NoBody :: RequestBody Unit
     let _stream = toStrom body
     expectToEqual true true
 
-  test "converts FormData to Strom" do
+  _ <- test "converts FormData to Strom" do
     let body = FormData (FObject.fromFoldable [])
     let _stream = toStrom body
     expectToEqual true true
 
-  test "converts JSONBody to Strom" do
+  _ <- test "converts JSONBody to Strom" do
     let body = JSONBody { foo: "bar" }
     let _stream = toStrom body
     expectToEqual true true
 
-  test "StreamBody flows through toStrom and can be collected" do
+  _ <- test "StreamBody flows through toStrom and can be collected" do
     -- Create a Strom with some buffers
     buf1 <- liftEffect $ Buffer.fromString "hello" UTF8
     buf2 <- liftEffect $ Buffer.fromString "world" UTF8
@@ -77,7 +77,7 @@ testRequestBodyToStrom = describe "RequestBody.toStrom" do
     expectToEqual "hello" content1
     expectToEqual "world" content2
 
-  test "streams large amount of data efficiently" do
+  _ <- test "streams large amount of data efficiently" do
     -- Create a large stream of random-ish data (1000 chunks)
     let
       makeChunk n = liftEffect do
