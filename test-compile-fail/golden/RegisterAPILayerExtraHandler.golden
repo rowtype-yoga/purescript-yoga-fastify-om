@@ -1,0 +1,7 @@
+registerAPILayer received an extra handler.
+    Extra field: "extra"
+    API shape: ( health :: Route @Symbol GET "health" (Record (() @Type))
+                             ( ok :: { body :: String
+                                     }
+                             )
+               )

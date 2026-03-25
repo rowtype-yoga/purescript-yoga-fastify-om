@@ -1,0 +1,12 @@
+registerAPILayer dependency type mismatch.
+    Handler: "health"
+    Dependency: "sqlite"
+    Expected: Connection
+    Actual: String
+    Handler context: ( logger :: Logger
+                     , sqlite :: Connection
+                     )
+    Layer context: ( fastify :: Fastify
+                   , logger :: Logger
+                   , sqlite :: String
+                   )

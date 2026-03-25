@@ -1,0 +1,8 @@
+registerAPILayer is missing a required dependency.
+    Handler: "health"
+    Missing dependency: "sqlite"
+    Expected type: Connection
+    Handler context: ( sqlite :: Connection
+                     )
+    Layer context: ( fastify :: Fastify
+                   )
